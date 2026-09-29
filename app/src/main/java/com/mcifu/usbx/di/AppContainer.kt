@@ -1,9 +1,12 @@
 package com.mcifu.usbx.di
 
 import android.content.Context
+import android.os.Build
 import android.util.LruCache
 import coil3.ImageLoader
 import coil3.disk.DiskCache
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import com.mcifu.usbx.data.settings.DataStoreSettingsRepository
@@ -62,6 +65,8 @@ class AppContainer(context: Context) {
 
     fun createImageLoader(): ImageLoader = ImageLoader.Builder(appContext)
         .components {
+            // GIF, WebP y HEIF animados (Android 9+ decodifica con ImageDecoder).
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) add(AnimatedImageDecoder.Factory()) else add(GifDecoder.Factory())
             add(ThumbnailKeyer())
             add(ThumbnailFetcher.Factory(ThumbnailGenerator(appContext), thumbnailDispatcher, thumbnailFailures))
         }

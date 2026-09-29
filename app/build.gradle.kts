@@ -72,6 +72,8 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.exifinterface)
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
+    implementation(libs.telephoto.zoomable.image.coil3)
 
     testImplementation(libs.junit)
 }
