@@ -1,18 +1,18 @@
 package com.mcifu.usbx.data.thumbnail
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.LruCache
 import coil3.ImageLoader
 import coil3.asImage
 import coil3.decode.DataSource
-import coil3.decode.ImageSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
-import coil3.fetch.SourceFetchResult
 import coil3.request.Options
 import coil3.size.pxOrElse
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
@@ -44,17 +44,16 @@ class ThumbnailFetcher(
         val diskKey = "${data.cacheKey}@$target"
         val diskCache = imageLoader.diskCache
 
-        diskCache?.openSnapshot(diskKey)?.let { snapshot ->
-            return SourceFetchResult(
-                source = ImageSource(
-                    file = snapshot.data,
-                    fileSystem = diskCache.fileSystem,
-                    diskCacheKey = diskKey,
-                    closeable = snapshot,
-                ),
-                mimeType = null,
-                dataSource = DataSource.DISK,
-            )
+        // Caché de disco (almacenamiento interno, rápido): se decodifica aquí y se marca siempre
+        // como reducida (isSampled) para que Coil no reutilice una miniatura pequeña en una celda
+        // más grande: todas las vistas comparten la misma clave de memoria por archivo.
+        if (diskCache != null) {
+            val cached = withContext(Dispatchers.IO) {
+                diskCache.openSnapshot(diskKey)?.use { snapshot -> BitmapFactory.decodeFile(snapshot.data.toFile().path) }
+            }
+            if (cached != null) {
+                return ImageFetchResult(image = cached.asImage(), isSampled = true, dataSource = DataSource.DISK)
+            }
         }
 
         // Archivos sin miniatura posible (MP3 sin carátula, vídeo con códec no soportado…):

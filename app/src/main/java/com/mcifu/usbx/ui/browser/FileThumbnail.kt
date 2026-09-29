@@ -58,7 +58,10 @@ fun FileThumbnail(
         if (item.type.hasThumbnail) {
             val context = LocalContext.current
             val request = remember(item.uri, item.lastModified, item.size) {
-                ImageRequest.Builder(context).data(item.toThumbnail()).build()
+                val thumbnail = item.toThumbnail()
+                // Clave fija por archivo: la lista, la cuadrícula, la tira del visor y el propio
+                // visor (como imagen provisional) comparten la misma miniatura en memoria.
+                ImageRequest.Builder(context).data(thumbnail).memoryCacheKey(thumbnail.cacheKey).build()
             }
             AsyncImage(
                 model = request,
