@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.mcifu.usbx.domain.model.UsbStorage
 import com.mcifu.usbx.ui.browser.BrowserScreen
 import com.mcifu.usbx.ui.home.HomeScreen
@@ -16,9 +17,14 @@ fun UsbxNavHost() {
         composable<HomeRoute> {
             HomeScreen(onOpenStorage = { storage -> navController.navigate(storage.rootRoute()) })
         }
-        composable<BrowserRoute> {
+        composable<BrowserRoute> { entry ->
+            val depth = entry.toRoute<BrowserRoute>().path.lastIndex
             BrowserScreen(
                 onNavigateUp = { navController.navigateUp() },
+                onNavigateToDepth = { target ->
+                    // Cada carpeta es una entrada de la pila: subir N niveles = N pops.
+                    repeat(depth - target) { navController.popBackStack() }
+                },
                 onOpenFolder = { route -> navController.navigate(route) },
             )
         }
