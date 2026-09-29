@@ -8,6 +8,8 @@ import android.graphics.Matrix
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
 import com.mcifu.usbx.domain.model.FileType
 import kotlin.math.abs
@@ -79,6 +81,7 @@ class ThumbnailGenerator(private val context: Context) {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.P)
     private fun decodeWithImageDecoder(uri: Uri, targetPx: Int): Bitmap {
         val source = ImageDecoder.createSource(context.contentResolver, uri)
         // ImageDecoder aplica la orientación EXIF automáticamente.
@@ -156,11 +159,9 @@ class ThumbnailGenerator(private val context: Context) {
         val shortSide = min(bitmap.width, bitmap.height)
         if (shortSide <= targetPx) return bitmap
         val scale = targetPx.toFloat() / shortSide
-        val scaled = Bitmap.createScaledBitmap(
-            bitmap,
+        val scaled = bitmap.scale(
             max(1, (bitmap.width * scale).roundToInt()),
             max(1, (bitmap.height * scale).roundToInt()),
-            true,
         )
         if (scaled !== bitmap) bitmap.recycle()
         return scaled

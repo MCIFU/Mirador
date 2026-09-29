@@ -1,6 +1,6 @@
 package com.mcifu.usbx.ui.viewer
 
-import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Build
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -78,7 +78,7 @@ class ImageViewerViewModel(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
-                val location = FolderLocation(route.storageId, Uri.parse(route.treeUri), route.folderDocumentId)
+                val location = FolderLocation(route.storageId, route.treeUri.toUri(), route.folderDocumentId)
                 val raw = fileRepository.listFolder(location)
                 val settings = settingsRepository.browserSettings.value
                 val playlist = withContext(Dispatchers.Default) {

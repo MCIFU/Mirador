@@ -1,6 +1,5 @@
 package com.mcifu.usbx.ui.browser
 
-import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -24,7 +23,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -47,12 +46,8 @@ fun FileGrid(
     onLongClick: (FileItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val configuration = LocalConfiguration.current
-    val screenAspect = if (configuration.screenHeightDp > 0) {
-        configuration.screenWidthDp.toFloat() / configuration.screenHeightDp
-    } else {
-        if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 2f else 0.5f
-    }
+    val window = LocalWindowInfo.current.containerSize
+    val screenAspect = if (window.height > 0) window.width.toFloat() / window.height else 0.5f
     val scope = rememberCoroutineScope()
 
     BoxWithConstraints(modifier.fillMaxSize()) {

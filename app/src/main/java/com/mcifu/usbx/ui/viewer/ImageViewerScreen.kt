@@ -59,6 +59,7 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import coil3.request.ImageRequest
 import coil3.size.Size
+import com.mcifu.usbx.data.storage.contentUri
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.ui.browser.ErrorState
 import com.mcifu.usbx.ui.common.ExternalActions
@@ -259,7 +260,7 @@ private fun PreloadNeighbours(items: List<FileItem>, currentPage: Int, targetSiz
 
 private fun viewerRequest(context: android.content.Context, item: FileItem, targetSize: Size) =
     ImageRequest.Builder(context)
-        .data(item.uri)
+        .data(item.contentUri)
         .size(targetSize)
         .memoryCacheKey("viewer:${item.uri}:${item.lastModified}:${targetSize.width}x${targetSize.height}")
         .build()

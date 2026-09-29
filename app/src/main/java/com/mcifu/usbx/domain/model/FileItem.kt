@@ -5,12 +5,13 @@ import android.net.Uri
 /**
  * Entrada de una carpeta de la memoria USB.
  *
- * [uri] es un URI de documento derivado del árbol autorizado; es el que se usa para leer,
- * generar miniaturas, abrir con otras apps o compartir.
+ * [uri] es el URI de documento (content://…) derivado del árbol autorizado, guardado como texto
+ * para que el dominio no dependa de clases de Android y se pueda probar en la JVM.
+ * Las capas de datos e interfaz lo convierten con `contentUri`.
  */
 data class FileItem(
     val documentId: String,
-    val uri: Uri,
+    val uri: String,
     val name: String,
     val mimeType: String,
     val type: FileType,

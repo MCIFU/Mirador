@@ -199,6 +199,7 @@ class AndroidStorageRepository(
         }
     }
 
+    @Suppress("UsableSpace") // En un volumen extraíble no hay caché que liberar: usableSpace es lo correcto.
     private fun spaceOf(volume: StorageVolume): Pair<Long, Long>? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
         return try {

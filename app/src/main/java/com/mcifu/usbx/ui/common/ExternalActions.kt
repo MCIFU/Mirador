@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import com.mcifu.usbx.data.storage.contentUri
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.FileTypeRules
 
@@ -44,16 +45,16 @@ object ExternalActions {
         val intent = if (files.size == 1) {
             Intent(Intent.ACTION_SEND).apply {
                 type = files.first().mimeType
-                putExtra(Intent.EXTRA_STREAM, files.first().uri)
+                putExtra(Intent.EXTRA_STREAM, files.first().contentUri)
             }
         } else {
             Intent(Intent.ACTION_SEND_MULTIPLE).apply {
                 type = commonMime(files.map { it.mimeType })
-                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(files.map { it.uri }))
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(files.map { it.contentUri }))
             }
         }.apply {
-            clipData = ClipData.newRawUri(null, files.first().uri).also { clip ->
-                files.drop(1).forEach { clip.addItem(ClipData.Item(it.uri)) }
+            clipData = ClipData.newRawUri(null, files.first().contentUri).also { clip ->
+                files.drop(1).forEach { clip.addItem(ClipData.Item(it.contentUri)) }
             }
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -61,7 +62,7 @@ object ExternalActions {
     }
 
     private fun viewIntent(item: FileItem, mime: String) = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(item.uri, mime)
+        setDataAndType(item.contentUri, mime)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 

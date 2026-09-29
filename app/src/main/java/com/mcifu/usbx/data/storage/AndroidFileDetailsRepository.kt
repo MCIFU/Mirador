@@ -45,14 +45,14 @@ class AndroidFileDetailsRepository(
     private fun imageDetails(base: FileDetails): FileDetails {
         val resolver = context.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(base.item.uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        resolver.openInputStream(base.item.contentUri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
 
         var width = bounds.outWidth.takeIf { it > 0 }
         var height = bounds.outHeight.takeIf { it > 0 }
         val extra = mutableListOf<Pair<String, String>>()
 
         runCatching {
-            resolver.openFileDescriptor(base.item.uri, "r")?.use { pfd ->
+            resolver.openFileDescriptor(base.item.contentUri, "r")?.use { pfd ->
                 val exif = ExifInterface(pfd.fileDescriptor)
                 if (exif.rotationDegrees == 90 || exif.rotationDegrees == 270) {
                     width = height.also { height = width }
@@ -75,7 +75,7 @@ class AndroidFileDetailsRepository(
     private fun mediaDetails(base: FileDetails): FileDetails {
         val retriever = MediaMetadataRetriever()
         try {
-            retriever.setDataSource(context, base.item.uri)
+            retriever.setDataSource(context, base.item.contentUri)
             fun meta(key: Int) = retriever.extractMetadata(key)?.takeIf { it.isNotBlank() }
 
             val duration = meta(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()

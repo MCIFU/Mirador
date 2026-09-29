@@ -3,6 +3,7 @@ package com.mcifu.usbx.data.thumbnail
 import android.net.Uri
 import coil3.key.Keyer
 import coil3.request.Options
+import com.mcifu.usbx.data.storage.contentUri
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.FileType
 
@@ -22,7 +23,7 @@ data class Thumbnail(
     val cacheKey: String get() = "thumb:$uri:$size:$lastModified"
 }
 
-fun FileItem.toThumbnail() = Thumbnail(uri, type, mimeType, size, lastModified)
+fun FileItem.toThumbnail() = Thumbnail(contentUri, type, mimeType, size, lastModified)
 
 val FileType.hasThumbnail: Boolean
     get() = this == FileType.IMAGE || this == FileType.VIDEO || this == FileType.AUDIO

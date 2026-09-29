@@ -1,6 +1,6 @@
 package com.mcifu.usbx.ui.browser
 
-import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Build
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -71,7 +71,7 @@ class BrowserViewModel(
 
     val location = FolderLocation(
         storageId = route.storageId,
-        treeUri = Uri.parse(route.treeUri),
+        treeUri = route.treeUri.toUri(),
         documentId = route.documentId,
     )
 

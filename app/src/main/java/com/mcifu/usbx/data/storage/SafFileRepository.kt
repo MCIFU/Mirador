@@ -66,7 +66,7 @@ class SafFileRepository(
                     val mime = FileTypeRules.effectiveMime(name, reportedMime, isDirectory)
                     result += FileItem(
                         documentId = documentId,
-                        uri = DocumentsContract.buildDocumentUriUsingTree(location.treeUri, documentId),
+                        uri = DocumentsContract.buildDocumentUriUsingTree(location.treeUri, documentId).toString(),
                         name = name,
                         mimeType = mime,
                         type = FileTypeRules.classify(name, mime, isDirectory),
