@@ -48,6 +48,7 @@ import com.mcifu.usbx.ui.common.CannotOpenDialog
 import com.mcifu.usbx.ui.common.ExternalActions
 import com.mcifu.usbx.ui.common.FileInfoDialog
 import com.mcifu.usbx.ui.navigation.BrowserRoute
+import com.mcifu.usbx.ui.navigation.ImageViewerRoute
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,6 +57,9 @@ fun BrowserScreen(
     onNavigateUp: () -> Unit,
     onNavigateToDepth: (Int) -> Unit,
     onOpenFolder: (BrowserRoute) -> Unit,
+    onOpenImage: (ImageViewerRoute) -> Unit,
+    returnedFromDocumentId: String?,
+    onReturnHandled: () -> Unit,
     viewModel: BrowserViewModel = viewModel(factory = BrowserViewModel.Factory),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -80,6 +84,7 @@ fun BrowserScreen(
     fun open(item: FileItem) {
         when {
             item.isDirectory -> onOpenFolder(viewModel.childRoute(item))
+            viewModel.canViewInternally(item) -> onOpenImage(viewModel.viewerRoute(item))
             else -> openExternally(item)
         }
     }
@@ -96,6 +101,19 @@ fun BrowserScreen(
                 scope.launch { snackbar.showSnackbar("No hay aplicaciones con las que compartir.") }
             }
         }
+    }
+
+    // Al volver del visor, deja visible la última imagen vista (como una galería).
+    LaunchedEffect(returnedFromDocumentId, state.items) {
+        val documentId = returnedFromDocumentId ?: return@LaunchedEffect
+        val index = state.items.indexOfFirst { it.documentId == documentId }
+        if (index >= 0) {
+            val gridVisible = gridState.layoutInfo.visibleItemsInfo.any { it.index == index }
+            val listVisible = listState.layoutInfo.visibleItemsInfo.any { it.index == index }
+            if (state.settings.viewMode == ViewMode.GRID && !gridVisible) gridState.scrollToItem(index)
+            if (state.settings.viewMode == ViewMode.LIST && !listVisible) listState.scrollToItem(index)
+        }
+        if (state.items.isNotEmpty()) onReturnHandled()
     }
 
     Scaffold(

@@ -1,6 +1,8 @@
 package com.mcifu.usbx.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -8,6 +10,9 @@ import androidx.navigation.toRoute
 import com.mcifu.usbx.domain.model.UsbStorage
 import com.mcifu.usbx.ui.browser.BrowserScreen
 import com.mcifu.usbx.ui.home.HomeScreen
+import com.mcifu.usbx.ui.viewer.ImageViewerScreen
+
+private const val KEY_LAST_VIEWED = "last_viewed_document"
 
 @Composable
 fun UsbxNavHost() {
@@ -19,6 +24,9 @@ fun UsbxNavHost() {
         }
         composable<BrowserRoute> { entry ->
             val depth = entry.toRoute<BrowserRoute>().path.lastIndex
+            val lastViewed by entry.savedStateHandle
+                .getStateFlow<String?>(KEY_LAST_VIEWED, null)
+                .collectAsStateWithLifecycle()
             BrowserScreen(
                 onNavigateUp = { navController.navigateUp() },
                 onNavigateToDepth = { target ->
@@ -26,6 +34,17 @@ fun UsbxNavHost() {
                     repeat(depth - target) { navController.popBackStack() }
                 },
                 onOpenFolder = { route -> navController.navigate(route) },
+                onOpenImage = { route -> navController.navigate(route) },
+                returnedFromDocumentId = lastViewed,
+                onReturnHandled = { entry.savedStateHandle[KEY_LAST_VIEWED] = null },
+            )
+        }
+        composable<ImageViewerRoute> {
+            ImageViewerScreen(
+                onBack = { lastDocumentId ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set(KEY_LAST_VIEWED, lastDocumentId)
+                    navController.popBackStack()
+                },
             )
         }
     }

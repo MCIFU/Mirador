@@ -1,6 +1,7 @@
 package com.mcifu.usbx.ui.browser
 
 import android.net.Uri
+import android.os.Build
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.createSavedStateHandle
@@ -12,6 +13,8 @@ import com.mcifu.usbx.domain.FileSorter
 import com.mcifu.usbx.domain.model.BrowserSettings
 import com.mcifu.usbx.domain.model.FileDetails
 import com.mcifu.usbx.domain.model.FileItem
+import com.mcifu.usbx.domain.model.FileType
+import com.mcifu.usbx.domain.model.FileTypeRules
 import com.mcifu.usbx.domain.model.FolderLocation
 import com.mcifu.usbx.domain.model.StorageException
 import com.mcifu.usbx.domain.repository.FileDetailsRepository
@@ -20,6 +23,7 @@ import com.mcifu.usbx.domain.repository.SettingsRepository
 import com.mcifu.usbx.domain.repository.StorageRepository
 import com.mcifu.usbx.ui.common.appContainer
 import com.mcifu.usbx.ui.navigation.BrowserRoute
+import com.mcifu.usbx.ui.navigation.ImageViewerRoute
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -141,6 +145,18 @@ class BrowserViewModel(
 
     suspend fun loadDetails(item: FileItem): FileDetails =
         fileDetailsRepository.loadDetails(item, storageLabel = route.path.first(), parentPath = route.path)
+
+    fun viewerRoute(image: FileItem) = ImageViewerRoute(
+        storageId = route.storageId,
+        treeUri = route.treeUri,
+        folderDocumentId = route.documentId,
+        startDocumentId = image.documentId,
+        path = route.path,
+    )
+
+    fun canViewInternally(item: FileItem): Boolean =
+        item.type == FileType.IMAGE &&
+            FileTypeRules.isInternallyViewableImage(item.name, item.mimeType, Build.VERSION.SDK_INT)
 
     fun childRoute(folder: FileItem) = BrowserRoute(
         storageId = route.storageId,

@@ -18,3 +18,16 @@ data class BrowserRoute(
     val documentId: String,
     val path: List<String>,
 )
+
+/**
+ * Visor de imágenes a pantalla completa. Recibe la carpeta y la imagen inicial; la lista de
+ * imágenes se obtiene de la caché del repositorio (sin volver a leer el USB).
+ */
+@Serializable
+data class ImageViewerRoute(
+    val storageId: String,
+    val treeUri: String,
+    val folderDocumentId: String,
+    val startDocumentId: String,
+    val path: List<String>,
+)
