@@ -48,7 +48,7 @@ import com.mcifu.usbx.ui.common.CannotOpenDialog
 import com.mcifu.usbx.ui.common.ExternalActions
 import com.mcifu.usbx.ui.common.FileInfoDialog
 import com.mcifu.usbx.ui.navigation.BrowserRoute
-import com.mcifu.usbx.ui.navigation.ImageViewerRoute
+import com.mcifu.usbx.ui.navigation.ViewerRoute
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,7 +57,7 @@ fun BrowserScreen(
     onNavigateUp: () -> Unit,
     onNavigateToDepth: (Int) -> Unit,
     onOpenFolder: (BrowserRoute) -> Unit,
-    onOpenImage: (ImageViewerRoute) -> Unit,
+    onOpenViewer: (ViewerRoute) -> Unit,
     onGoHome: () -> Unit,
     returnedFromDocumentId: String?,
     onReturnHandled: () -> Unit,
@@ -85,7 +85,7 @@ fun BrowserScreen(
     fun open(item: FileItem) {
         when {
             item.isDirectory -> onOpenFolder(viewModel.childRoute(item))
-            viewModel.canViewInternally(item) -> onOpenImage(viewModel.viewerRoute(item))
+            viewModel.canViewInternally(item) -> onOpenViewer(viewModel.viewerRoute(item))
             else -> openExternally(item)
         }
     }

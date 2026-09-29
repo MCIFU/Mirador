@@ -34,6 +34,7 @@ import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.GridLayout
 import com.mcifu.usbx.ui.common.FastScroller
 import com.mcifu.usbx.ui.common.label
+import com.mcifu.usbx.ui.common.mediaSharedBounds
 import kotlinx.coroutines.launch
 
 @Composable
@@ -115,8 +116,12 @@ private fun GridTile(
             .semantics { contentDescription = "${item.type.label()}: ${item.name}" },
     ) {
         if (item.type.isVisualMedia) {
-            // Fotos y vídeos: solo la imagen, como en una galería.
-            FileThumbnail(item, iconSize = iconSize, modifier = Modifier.fillMaxSize())
+            // Fotos y vídeos: solo la imagen, como en una galería. La foto "crece" hacia el visor.
+            FileThumbnail(
+                item,
+                iconSize = iconSize,
+                modifier = Modifier.fillMaxSize().mediaSharedBounds(item.documentId),
+            )
         } else {
             // Carpetas y otros archivos: icono (o carátula) con el nombre debajo.
             Column(

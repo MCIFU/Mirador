@@ -20,11 +20,11 @@ data class BrowserRoute(
 )
 
 /**
- * Visor de imágenes a pantalla completa. Recibe la carpeta y la imagen inicial; la lista de
- * imágenes se obtiene de la caché del repositorio (sin volver a leer el USB).
+ * Visor a pantalla completa. Recibe la carpeta y el elemento inicial; la lista se obtiene de la
+ * caché del repositorio (sin volver a leer el USB) y se filtra según el ámbito elegido.
  */
 @Serializable
-data class ImageViewerRoute(
+data class ViewerRoute(
     val storageId: String,
     val treeUri: String,
     val folderDocumentId: String,

@@ -30,6 +30,7 @@ import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.ui.common.FastScroller
 import com.mcifu.usbx.ui.common.Formatters
 import com.mcifu.usbx.ui.common.label
+import com.mcifu.usbx.ui.common.mediaSharedBounds
 import kotlinx.coroutines.launch
 
 @Composable
@@ -95,7 +96,10 @@ private fun FileRow(item: FileItem, onClick: () -> Unit, onMore: () -> Unit) {
                 item = item,
                 iconSize = 26.dp,
                 showVideoBadge = false,
-                modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small),
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .mediaSharedBounds(item.documentId, enabled = item.type.isVisualMedia),
             )
         },
         trailingContent = {

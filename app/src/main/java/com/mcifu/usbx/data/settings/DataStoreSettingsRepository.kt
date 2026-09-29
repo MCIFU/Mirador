@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.mcifu.usbx.domain.model.BrowserSettings
 import com.mcifu.usbx.domain.model.SortOrder
+import com.mcifu.usbx.domain.model.ViewerSettings
 import com.mcifu.usbx.domain.repository.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,6 +44,28 @@ class DataStoreSettingsRepository(
         }
     }
 
+    override val viewerSettings: StateFlow<ViewerSettings> = store.data
+        .map { it.toViewerSettings() }
+        .stateIn(appScope, SharingStarted.Eagerly, ViewerSettings())
+
+    override suspend fun updateViewerSettings(transform: (ViewerSettings) -> ViewerSettings) {
+        store.edit { prefs ->
+            val updated = transform(prefs.toViewerSettings())
+            prefs[VIEWER_SCOPE] = updated.scope.name
+            prefs[VIEWER_ORIENTATION] = updated.orientation.name
+            prefs[VIEWER_FILMSTRIP] = updated.showFilmstrip
+        }
+    }
+
+    private fun Preferences.toViewerSettings(): ViewerSettings {
+        val defaults = ViewerSettings()
+        return ViewerSettings(
+            scope = enumOrDefault(this[VIEWER_SCOPE], defaults.scope),
+            orientation = enumOrDefault(this[VIEWER_ORIENTATION], defaults.orientation),
+            showFilmstrip = this[VIEWER_FILMSTRIP] ?: defaults.showFilmstrip,
+        )
+    }
+
     private fun Preferences.toBrowserSettings(): BrowserSettings {
         val defaults = BrowserSettings()
         return BrowserSettings(
@@ -69,5 +92,8 @@ class DataStoreSettingsRepository(
         val SORT_ASCENDING = booleanPreferencesKey("browser_sort_ascending")
         val FOLDERS_FIRST = booleanPreferencesKey("browser_folders_first")
         val SHOW_HIDDEN = booleanPreferencesKey("browser_show_hidden")
+        val VIEWER_SCOPE = stringPreferencesKey("viewer_scope")
+        val VIEWER_ORIENTATION = stringPreferencesKey("viewer_orientation")
+        val VIEWER_FILMSTRIP = booleanPreferencesKey("viewer_filmstrip")
     }
 }

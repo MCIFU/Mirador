@@ -24,7 +24,7 @@ import com.mcifu.usbx.domain.repository.SettingsRepository
 import com.mcifu.usbx.domain.repository.StorageRepository
 import com.mcifu.usbx.ui.common.appContainer
 import com.mcifu.usbx.ui.navigation.BrowserRoute
-import com.mcifu.usbx.ui.navigation.ImageViewerRoute
+import com.mcifu.usbx.ui.navigation.ViewerRoute
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -183,7 +183,7 @@ class BrowserViewModel(
     suspend fun loadDetails(item: FileItem): FileDetails =
         fileDetailsRepository.loadDetails(item, storageLabel = route.path.first(), parentPath = route.path)
 
-    fun viewerRoute(image: FileItem) = ImageViewerRoute(
+    fun viewerRoute(image: FileItem) = ViewerRoute(
         storageId = route.storageId,
         treeUri = route.treeUri,
         folderDocumentId = route.documentId,
