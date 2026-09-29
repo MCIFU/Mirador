@@ -4,7 +4,7 @@ Explorador y visor multimedia para memorias USB conectadas por USB‑C / OTG en 
 Dispositivo de referencia: **Samsung Galaxy M52 5G** (Android 14 / One UI 6), pero solo usa APIs
 públicas de Android: no hay código específico de Samsung.
 
-> **Estado: Fase 3 (reproductor de vídeo).** Lo que no está en la tabla de abajo como «Hecho» no está
+> **Estado: Fase 4 (multiview).** Lo que no está en la tabla de abajo como «Hecho» no está
 > implementado, y la app no lo aparenta.
 
 | Área | Estado |
@@ -15,7 +15,7 @@ públicas de Android: no hay código específico de Samsung.
 | Visor básico: pantalla completa, deslizar, precarga | Hecho (Fase 1) |
 | Zoom nítido, doble toque, rotación, orientación, transiciones, tira de miniaturas, GIF | Hecho (Fase 2) |
 | Reproductor de vídeo y audio integrado: barra de progreso, velocidad, repetición, bloqueo, gestos | Hecho (Fase 3) |
-| Multiview (2 fotos o 2 vídeos) | Fase 4 |
+| Multiview: 2 fotos o 2 vídeos, zoom y reproducción sincronizables, intercambiar paneles | Hecho (Fase 4) |
 | Copiar, mover, borrar, renombrar, selección múltiple | Fase 5 |
 | Ajustes, caché avanzada, accesibilidad, diseño final | Fase 6 |
 
@@ -140,7 +140,8 @@ app/src/main/java/com/mcifu/usbx/
     ├── home/                     Memorias detectadas, permiso, carpeta manual
     ├── browser/                  Lista, cuadrícula, ajustes de visualización, acciones
     ├── viewer/                   Visor: páginas (imagen/vídeo/audio/archivo), controles, efectos
-    ├── player/                   Reproductor: controlador ExoPlayer, gestos, barra, controles, bloqueo
+    ├── player/                   Reproductor: controlador ExoPlayer, gestos, barra, controles, bloqueo, sincronización
+    ├── multiview/                Dos paneles, zoom compartible, selector de archivo
     ├── common/                   Diálogos, abrir/compartir, formatos, scroll rápido
     ├── navigation/               Rutas tipadas y NavHost
     └── theme/                    Material 3 con paleta propia, claro y oscuro
@@ -148,9 +149,8 @@ app/src/main/java/com/mcifu/usbx/
 
 Preparado para las siguientes fases:
 
-- `VideoPlayerController` + `PlayerState` encapsulan un reproductor completo (estado, gestos,
-  avance rápido, arrastre). El multiview de la Fase 4 creará dos controladores independientes
-  y la sincronización se construirá encima (mismas llamadas `seekTo` / `setSpeed` / `play`).
+- `VideoPlayerController` + `PlayerState` encapsulan un reproductor completo; el multiview usa dos
+  y `PlaybackSync` los enlaza con las mismas llamadas (`play`, `seekTo`, `setSpeed`…).
 - Las reglas del reproductor (`PlaybackRules`) son puras y están probadas con tests.
 - `ExternalActions.share` ya acepta varios archivos (para la selección múltiple de la Fase 5).
 - El permiso del árbol se toma con lectura **y escritura**, así que copiar, mover y renombrar
@@ -237,6 +237,26 @@ un MKV o AVI, pruébalo también.
 | 18 | Formato no compatible | Un vídeo con códec raro (p. ej. AVI antiguo o MKV con DTS) | Mensaje «El reproductor integrado no admite este formato» con «Abrir con otra aplicación» |
 | 19 | Desconectar | Desenchufa el pendrive reproduciendo; vuelve a enchufarlo | Aviso de desconexión sin cierres; al reconectar vuelve al mismo vídeo cerca del mismo punto |
 
+## Guía de pruebas de la Fase 4 (multiview)
+
+Usa una carpeta con varias fotos parecidas (p. ej. ráfagas) y dos vídeos.
+
+| # | Prueba | Cómo hacerla | Resultado esperado |
+|---|---|---|---|
+| 1 | Abrir | Pulsación larga en una foto → «Comparar en multiview» (o ⋮ en el visor) | Se abre con esa foto arriba y un panel vacío con «Elegir foto o vídeo» |
+| 2 | Elegir el segundo | Toca «Elegir foto o vídeo» y escoge otra foto | Aparece en el segundo panel |
+| 3 | Zoom independiente | Pellizca y arrastra en un panel; doble toque | Solo cambia ese panel; doble toque amplía 2,5× o vuelve a encajar |
+| 4 | Zoom sincronizado | Botón de enlace arriba (con dos fotos) y amplía en un panel | El otro panel se amplía y se mueve exactamente igual; arriba pone «Zoom sincronizado» |
+| 5 | Cambiar y cerrar | En la cabecera de un panel: icono de galería (cambiar) y ✕ (cerrar) | Cambia la foto de ese panel o lo vacía |
+| 6 | Intercambiar | Botón ⇅ (vertical) o ⇄ (horizontal) | Los paneles cambian de sitio al instante, sin recargar |
+| 7 | Girar | Pon el móvil en horizontal (o usa el botón de orientación) | Los paneles pasan a estar lado a lado |
+| 8 | Dos vídeos | Pon un vídeo en cada panel | Se reproducen a la vez; el segundo empieza silenciado (icono de altavoz tachado) |
+| 9 | Controles independientes | En cada panel: pausa, barra, velocidad, volumen, repetición | Cada acción afecta solo a su panel |
+| 10 | Sincronizar | Pausa, deja el vídeo B 2 s por delante, abre el menú de enlace → «Sincronizar reproducción» | Arriba: «Sincronizado · desfase +2,0 s». Play, pausa, barra y velocidad en cualquiera de los dos mueven ambos manteniendo el desfase |
+| 11 | Alinear | Menú de enlace → «Alinear (desfase 0)» | Ambos saltan al mismo instante |
+| 12 | Volver al visor | Atrás desde el multiview abierto desde el visor | El vídeo del visor continúa donde estaba |
+| 13 | Desconectar | Desenchufa el USB con dos vídeos reproduciéndose; reconecta | Aviso sin cierres; al reconectar vuelven ambos vídeos |
+
 Si algo falla, lo más útil es: modelo de pendrive y formato (FAT32/exFAT), qué pantalla estaba
 abierta y, si es posible, el log (`adb logcat | grep -i usbx`).
 
@@ -266,6 +286,14 @@ abierta y, si es posible, el log (`adb logcat | grep -i usbx`).
   empieza a decodificar hasta que llegas a él (en local suele tardar menos de medio segundo). La
   precarga real de vídeo (`PreloadManager` de Media3) se valorará en la Fase 6.
 - **Reproducción en segundo plano / pantalla apagada** no está incluida: al salir de la app se pausa.
+- **Zoom en el multiview** no usa teselas (no es compatible con compartir el zoom entre dos fotos): cada
+  panel carga la foto al doble de su tamaño, suficiente hasta ~3×. Para zoom máximo, usa el visor normal.
+- **Zoom sincronizado** aplica la misma ampliación y desplazamiento a los dos paneles: coincide al
+  píxel cuando las dos fotos tienen la misma proporción (lo normal en ráfagas o fotos de la misma cámara).
+- **Dos vídeos 4K a la vez** pueden superar la capacidad de decodificación del M52; en ese caso uno
+  de los paneles muestra el error con «Reintentar». Con 1080p no debería haber problema.
+- **Sincronización**: la corrección de deriva provoca un pequeño salto en el vídeo B si se desvía más de
+  250 ms (se comprueba cada 2 s). El selector del multiview solo muestra archivos de la misma carpeta.
 - TIFF, RAW (DNG) y SVG se abren con otras apps.
 
 ## Licencia
