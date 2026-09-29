@@ -14,14 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.BrokenImage
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -34,10 +31,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,10 +42,7 @@ import coil3.request.ImageRequest
 import coil3.size.Size
 import com.mcifu.usbx.data.image.RegionDecoding
 import com.mcifu.usbx.data.storage.contentUri
-import com.mcifu.usbx.data.thumbnail.toThumbnail
 import com.mcifu.usbx.domain.model.FileItem
-import com.mcifu.usbx.domain.model.FileType
-import com.mcifu.usbx.ui.browser.FileThumbnail
 import com.mcifu.usbx.ui.common.Formatters
 import com.mcifu.usbx.ui.common.icon
 import com.mcifu.usbx.ui.common.label
@@ -145,80 +137,6 @@ internal fun ImagePage(
     }
 }
 
-/**
- * Vídeo dentro del visor: fotograma de portada y botón de reproducir.
- * Hasta la Fase 3 (reproductor integrado) se abre con el reproductor instalado.
- */
-@Composable
-internal fun VideoPage(
-    item: FileItem,
-    onTap: () -> Unit,
-    onPlay: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-    val poster = remember(item.uri) {
-        val thumbnail = item.toThumbnail()
-        ImageRequest.Builder(context)
-            .data(thumbnail)
-            .size(768)
-            .memoryCacheKey(thumbnail.cacheKey)
-            .placeholderMemoryCacheKey(thumbnail.cacheKey)
-            .build()
-    }
-    Box(modifier.fillMaxSize().tapToToggle(onTap), contentAlignment = Alignment.Center) {
-        AsyncImage(
-            model = poster,
-            contentDescription = item.name,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize(),
-        )
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            FilledIconButton(
-                onClick = onPlay,
-                modifier = Modifier.size(76.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.Black.copy(alpha = 0.55f)),
-            ) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = "Reproducir ${item.name}", tint = Color.White, modifier = Modifier.size(44.dp))
-            }
-            Text(
-                "Se abrirá con tu reproductor de vídeo",
-                color = Color.White.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.labelMedium,
-            )
-        }
-    }
-}
-
-/** Audio: carátula (si la hay), nombre y botón de reproducir con la app instalada. */
-@Composable
-internal fun AudioPage(
-    item: FileItem,
-    onTap: () -> Unit,
-    onPlay: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    PageMessage(
-        modifier = modifier,
-        icon = {
-            FileThumbnail(
-                item = item,
-                iconSize = 72.dp,
-                showVideoBadge = false,
-                modifier = Modifier.size(220.dp).clip(MaterialTheme.shapes.large),
-            )
-        },
-        title = item.name,
-        action = {
-            Button(onClick = onPlay) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                Text("Reproducir", modifier = Modifier.padding(start = 8.dp))
-            }
-        },
-        onTap = onTap,
-    )
-}
-
 /** Cualquier otro archivo (ámbito "Todos los archivos"): ficha con abrir / abrir con. */
 @Composable
 internal fun FilePage(
@@ -295,4 +213,3 @@ private fun DelayedSpinner() {
 private fun Modifier.tapToToggle(onTap: () -> Unit): Modifier =
     clickable(interactionSource = null, indication = null, onClick = onTap)
 
-internal val FileItem.isVideo get() = type == FileType.VIDEO

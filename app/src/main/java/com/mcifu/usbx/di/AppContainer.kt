@@ -35,7 +35,7 @@ import okio.Path.Companion.toOkioPath
  * menos tiempo de compilación y ninguna magia.
  */
 class AppContainer(context: Context) {
-    private val appContext = context.applicationContext
+    val appContext: Context = context.applicationContext
 
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

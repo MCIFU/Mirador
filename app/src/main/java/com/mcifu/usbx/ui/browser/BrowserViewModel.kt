@@ -10,12 +10,13 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.toRoute
 import com.mcifu.usbx.domain.FileSorter
+import com.mcifu.usbx.domain.MediaNavigation
+import com.mcifu.usbx.domain.PlaybackRules
 import com.mcifu.usbx.domain.connectionChanges
 import com.mcifu.usbx.domain.model.BrowserSettings
 import com.mcifu.usbx.domain.model.FileDetails
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.FileType
-import com.mcifu.usbx.domain.model.FileTypeRules
 import com.mcifu.usbx.domain.model.FolderLocation
 import com.mcifu.usbx.domain.model.StorageException
 import com.mcifu.usbx.domain.repository.FileDetailsRepository
@@ -191,9 +192,9 @@ class BrowserViewModel(
         path = route.path,
     )
 
+    /** Fotos compatibles, vídeos y audio se abren en el visor/reproductor de USBX. */
     fun canViewInternally(item: FileItem): Boolean =
-        item.type == FileType.IMAGE &&
-            FileTypeRules.isInternallyViewableImage(item.name, item.mimeType, Build.VERSION.SDK_INT)
+        MediaNavigation.isViewableImage(item, Build.VERSION.SDK_INT) || PlaybackRules.isPlayable(item)
 
     fun childRoute(folder: FileItem) = BrowserRoute(
         storageId = route.storageId,

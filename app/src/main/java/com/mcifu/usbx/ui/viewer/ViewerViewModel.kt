@@ -1,5 +1,6 @@
 package com.mcifu.usbx.ui.viewer
 
+import android.content.Context
 import android.os.Build
 import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
@@ -10,6 +11,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.toRoute
 import com.mcifu.usbx.domain.FileSorter
+import com.mcifu.usbx.domain.LoopMode
 import com.mcifu.usbx.domain.MediaNavigation
 import com.mcifu.usbx.domain.connectionChanges
 import com.mcifu.usbx.domain.model.FileDetails
@@ -25,10 +27,14 @@ import com.mcifu.usbx.domain.repository.SettingsRepository
 import com.mcifu.usbx.domain.repository.StorageRepository
 import com.mcifu.usbx.ui.common.appContainer
 import com.mcifu.usbx.ui.navigation.ViewerRoute
+import com.mcifu.usbx.ui.player.VideoPlayerController
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -57,6 +63,7 @@ class ViewerViewModel(
     private val settingsRepository: SettingsRepository,
     private val fileDetailsRepository: FileDetailsRepository,
     private val storageRepository: StorageRepository,
+    appContext: Context,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ViewerRoute>()
@@ -67,18 +74,32 @@ class ViewerViewModel(
 
     val settings: StateFlow<ViewerSettings> = settingsRepository.viewerSettings
 
+    /** Reproductor de vídeo y audio del visor (uno solo, conectado a la página visible). */
+    val player = VideoPlayerController(appContext, viewModelScope)
+
+    /** Petición de pasar al siguiente vídeo (modo "Repetir carpeta"). */
+    private val _advanceRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val advanceRequests: SharedFlow<Unit> = _advanceRequests.asSharedFlow()
+
     /** Documento visible ahora mismo. */
     private var currentDocumentId: String = route.startDocumentId
     private var loadJob: Job? = null
 
     init {
         load()
+        player.onEndedInFolderMode = { _advanceRequests.tryEmit(Unit) }
+        viewModelScope.launch {
+            settingsRepository.viewerSettings.map { it.loopMode }.distinctUntilChanged().collect(player::setLoopMode)
+        }
         viewModelScope.launch {
             storageRepository.storages.connectionChanges(route.storageId).collect { connected ->
                 fileRepository.invalidate(route.storageId)
                 if (connected) {
                     load()
                 } else {
+                    // Sin memoria no hay nada que leer: se detiene el reproductor (la posición
+                    // se recuerda para continuar al reconectar).
+                    player.setItem(null)
                     loadJob?.cancel()
                     _state.value = ViewerState(isLoading = false, error = StorageException.Reason.DISCONNECTED)
                 }
@@ -133,6 +154,19 @@ class ViewerViewModel(
         viewModelScope.launch { settingsRepository.updateViewerSettings { it.copy(orientation = mode) } }
     }
 
+    fun cycleLoopMode() {
+        val next = when (settings.value.loopMode) {
+            LoopMode.REPEAT_ONE -> LoopMode.PLAY_ONCE
+            LoopMode.PLAY_ONCE -> LoopMode.REPEAT_FOLDER
+            LoopMode.REPEAT_FOLDER -> LoopMode.REPEAT_ONE
+        }
+        viewModelScope.launch { settingsRepository.updateViewerSettings { it.copy(loopMode = next) } }
+    }
+
+    override fun onCleared() {
+        player.release()
+    }
+
     fun setFilmstrip(visible: Boolean) {
         viewModelScope.launch { settingsRepository.updateViewerSettings { it.copy(showFilmstrip = visible) } }
     }
@@ -151,6 +185,7 @@ class ViewerViewModel(
                     settingsRepository = appContainer.settingsRepository,
                     fileDetailsRepository = appContainer.fileDetailsRepository,
                     storageRepository = appContainer.storageRepository,
+                    appContext = appContainer.appContext,
                 )
             }
         }
