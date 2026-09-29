@@ -30,13 +30,7 @@ class HomeViewModel(
     private val _events = Channel<HomeEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    /** Almacenamiento para el que se abrió el selector (null = carpeta manual). */
-    private var pendingStorageId: String? = null
-
-    fun accessIntent(storage: UsbStorage?): Intent {
-        pendingStorageId = storage?.id
-        return storageRepository.createAccessIntent(storage)
-    }
+    fun accessIntent(storage: UsbStorage?): Intent = storageRepository.createAccessIntent(storage)
 
     fun onAccessResult(treeUri: Uri?, flags: Int) {
         if (treeUri == null) {

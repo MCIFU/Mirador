@@ -1,6 +1,7 @@
 package com.mcifu.usbx.data.thumbnail
 
 import android.graphics.Bitmap
+import android.util.LruCache
 import coil3.ImageLoader
 import coil3.asImage
 import coil3.decode.DataSource
@@ -31,6 +32,7 @@ class ThumbnailFetcher(
     private val imageLoader: ImageLoader,
     private val generator: ThumbnailGenerator,
     private val dispatcher: CoroutineDispatcher,
+    private val failures: LruCache<String, Boolean>,
 ) : Fetcher {
 
     override suspend fun fetch(): FetchResult {
@@ -55,8 +57,15 @@ class ThumbnailFetcher(
             )
         }
 
+        // Archivos sin miniatura posible (MP3 sin carátula, vídeo con códec no soportado…):
+        // se recuerdan para no volver a leerlos del USB cada vez que pasan por pantalla.
+        if (failures.get(data.cacheKey) != null) throw IOException("Sin miniatura (en caché)")
+
         val bitmap = withContext(dispatcher) { generator.generate(data, target) }
-            ?: throw IOException("No hay miniatura para ${data.uri}")
+        if (bitmap == null) {
+            failures.put(data.cacheKey, true)
+            throw IOException("No hay miniatura para ${data.uri}")
+        }
 
         if (diskCache != null) {
             withContext(dispatcher) {
@@ -81,12 +90,18 @@ class ThumbnailFetcher(
         )
     }
 
+    /**
+     * @param failures archivos sin miniatura posible. Se vacía al cambiar las memorias conectadas,
+     * porque un fallo durante una desconexión no significa que el archivo no tenga miniatura.
+     */
     class Factory(
         private val generator: ThumbnailGenerator,
         private val dispatcher: CoroutineDispatcher,
+        private val failures: LruCache<String, Boolean>,
     ) : Fetcher.Factory<Thumbnail> {
+
         override fun create(data: Thumbnail, options: Options, imageLoader: ImageLoader): Fetcher =
-            ThumbnailFetcher(data, options, imageLoader, generator, dispatcher)
+            ThumbnailFetcher(data, options, imageLoader, generator, dispatcher, failures)
     }
 
     companion object {

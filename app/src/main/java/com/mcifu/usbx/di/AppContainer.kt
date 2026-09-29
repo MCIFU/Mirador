@@ -1,6 +1,7 @@
 package com.mcifu.usbx.di
 
 import android.content.Context
+import android.util.LruCache
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
@@ -19,6 +20,9 @@ import com.mcifu.usbx.domain.repository.StorageRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import okio.Path.Companion.toOkioPath
 
 /**
@@ -45,10 +49,21 @@ class AppContainer(context: Context) {
      */
     private val thumbnailDispatcher = Dispatchers.IO.limitedParallelism(3)
 
+    private val thumbnailFailures = LruCache<String, Boolean>(2_000)
+
+    init {
+        appScope.launch {
+            storageRepository.storages
+                .map { storages -> storages.filter { it.canBrowse }.map { it.id }.toSet() }
+                .distinctUntilChanged()
+                .collect { thumbnailFailures.evictAll() }
+        }
+    }
+
     fun createImageLoader(): ImageLoader = ImageLoader.Builder(appContext)
         .components {
             add(ThumbnailKeyer())
-            add(ThumbnailFetcher.Factory(ThumbnailGenerator(appContext), thumbnailDispatcher))
+            add(ThumbnailFetcher.Factory(ThumbnailGenerator(appContext), thumbnailDispatcher, thumbnailFailures))
         }
         .memoryCache {
             MemoryCache.Builder()
