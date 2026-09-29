@@ -62,13 +62,19 @@ enum class PlayerError { UNSUPPORTED_FORMAT, READ_ERROR, OTHER }
 class VideoPlayerController(
     private val context: Context,
     private val scope: CoroutineScope,
+    /**
+     * Solo un reproductor por pantalla debe gestionar el foco de audio: si dos lo piden,
+     * Android pausa el primero. En el multiview el segundo panel lo lleva desactivado.
+     */
+    private val handleAudioFocus: Boolean = true,
+    initialVolume: Float = 1f,
 ) {
     private var _player: ExoPlayer? = null
 
     /** `null` hasta que se reproduce algo. */
     val player: Player? get() = _player
 
-    private val _state = MutableStateFlow(PlayerState())
+    private val _state = MutableStateFlow(PlayerState(volume = initialVolume))
     val state: StateFlow<PlayerState> = _state.asStateFlow()
 
     /** Se invoca al terminar un elemento con [LoopMode.REPEAT_FOLDER]. */
@@ -96,7 +102,7 @@ class VideoPlayerController(
     private fun requirePlayer(): ExoPlayer = _player ?: ExoPlayer.Builder(context)
         .setAudioAttributes(
             AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
-            /* handleAudioFocus = */ true,
+            handleAudioFocus,
         )
         .setHandleAudioBecomingNoisy(true) // pausa al desconectar auriculares
         .build()
@@ -149,6 +155,17 @@ class VideoPlayerController(
     fun pause() {
         _player?.pause()
     }
+
+    fun play() {
+        val player = _player ?: return
+        if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
+        player.play()
+    }
+
+    /** Posición exacta en este instante (el estado se publica cada 250 ms). */
+    fun currentPositionMs(): Long = _player?.currentPosition ?: _state.value.positionMs
+
+    val isPlayingNow: Boolean get() = _player?.isPlaying == true
 
     fun seekTo(positionMs: Long) {
         val player = _player ?: return
