@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="usbx_brand">#006A6A</color>
+    <color name="usbx_background">#FAFDFC</color>
+    <color name="usbx_icon_glyph">#FFFFFF</color>
+    <color name="usbx_icon_accent">#006A6A</color>
+</resources>
