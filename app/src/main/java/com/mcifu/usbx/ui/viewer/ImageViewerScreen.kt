@@ -75,6 +75,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun ImageViewerScreen(
     onBack: (lastDocumentId: String?) -> Unit,
+    onGoHome: () -> Unit,
     viewModel: ImageViewerViewModel = viewModel(factory = ImageViewerViewModel.Factory),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -89,7 +90,7 @@ fun ImageViewerScreen(
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             when {
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
-                state.error != null -> ErrorState(state.error!!, onRetry = viewModel::load)
+                state.error != null -> ErrorState(state.error!!, onRetry = viewModel::load, onGoHome = onGoHome)
                 state.items.isEmpty() -> Text(
                     "No hay imágenes en esta carpeta",
                     color = Color.White,
@@ -101,6 +102,7 @@ fun ImageViewerScreen(
                     val current = items.getOrNull(pagerState.currentPage)
 
                     BackHandler { onBack(current?.documentId) }
+                LaunchedEffect(current) { current?.let(viewModel::onPageShown) }
 
                     val windowSize = LocalWindowInfo.current.containerSize
                     val targetSize = remember(windowSize) {

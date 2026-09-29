@@ -22,16 +22,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -55,14 +52,18 @@ class AndroidStorageRepository(
     private val labels = context.getSharedPreferences("storage_labels", Context.MODE_PRIVATE)
     private val manualRefresh = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    override val storages: StateFlow<List<UsbStorage>> =
-        merge(systemStorageEvents(), manualRefresh)
-            .onStart { emit(Unit) }
-            .conflate()
-            .map { scan() }
-            .distinctUntilChanged()
-            .flowOn(Dispatchers.IO)
-            .stateIn(appScope, SharingStarted.WhileSubscribed(5_000), scan())
+    private val _storages = MutableStateFlow(scan())
+    override val storages: StateFlow<List<UsbStorage>> = _storages.asStateFlow()
+
+    init {
+        // Escucha durante toda la vida del proceso: el coste es mínimo y así el estado es
+        // correcto aunque la desconexión ocurra con la app en segundo plano.
+        appScope.launch(Dispatchers.IO) {
+            merge(systemStorageEvents(), manualRefresh)
+                .conflate()
+                .collect { _storages.value = scan() }
+        }
+    }
 
     override fun refresh() {
         manualRefresh.tryEmit(Unit)
@@ -105,15 +106,16 @@ class AndroidStorageRepository(
             val volume = findVolume(newId)
             labels.edit { putString(newId, volume?.getDescription(context) ?: folderLabel(treeUri)) }
 
+            // Actualización síncrona: quien navegue a continuación ya ve el permiso concedido.
             val updated = scan()
-            refresh()
+            _storages.value = updated
             updated.firstOrNull { it.id == newId }
         }
 
     override suspend fun forget(storage: UsbStorage) = withContext(Dispatchers.IO) {
         storage.access?.let { releaseQuietly(it.treeUri) }
         labels.edit { remove(storage.id) }
-        refresh()
+        _storages.value = scan()
     }
 
     // --- Escaneo -------------------------------------------------------------------------

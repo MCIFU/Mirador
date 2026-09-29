@@ -24,4 +24,10 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        // Por si algún evento de montaje llegó mientras el proceso estaba congelado.
+        (application as UsbxApplication).container.storageRepository.refresh()
+    }
 }

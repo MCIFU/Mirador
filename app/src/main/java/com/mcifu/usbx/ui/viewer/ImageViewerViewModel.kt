@@ -12,6 +12,7 @@ import androidx.navigation.toRoute
 import com.mcifu.usbx.domain.FileSorter
 import com.mcifu.usbx.domain.MediaNavigation
 import com.mcifu.usbx.domain.ViewerScope
+import com.mcifu.usbx.domain.connectionChanges
 import com.mcifu.usbx.domain.model.FileDetails
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.FolderLocation
@@ -19,6 +20,7 @@ import com.mcifu.usbx.domain.model.StorageException
 import com.mcifu.usbx.domain.repository.FileDetailsRepository
 import com.mcifu.usbx.domain.repository.FileRepository
 import com.mcifu.usbx.domain.repository.SettingsRepository
+import com.mcifu.usbx.domain.repository.StorageRepository
 import com.mcifu.usbx.ui.common.appContainer
 import com.mcifu.usbx.ui.navigation.ImageViewerRoute
 import kotlinx.coroutines.CancellationException
@@ -41,6 +43,7 @@ class ImageViewerViewModel(
     private val fileRepository: FileRepository,
     private val settingsRepository: SettingsRepository,
     private val fileDetailsRepository: FileDetailsRepository,
+    private val storageRepository: StorageRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ImageViewerRoute>()
@@ -49,8 +52,26 @@ class ImageViewerViewModel(
     private val _state = MutableStateFlow(ViewerState())
     val state: StateFlow<ViewerState> = _state.asStateFlow()
 
+    /** Documento visible ahora mismo: al recargar tras una reconexión se vuelve a él. */
+    private var currentDocumentId: String = route.startDocumentId
+
     init {
         load()
+        viewModelScope.launch {
+            storageRepository.storages.connectionChanges(route.storageId).collect { connected ->
+                if (connected) {
+                    fileRepository.invalidate(route.storageId)
+                    load()
+                } else {
+                    fileRepository.invalidate(route.storageId)
+                    _state.value = ViewerState(isLoading = false, error = StorageException.Reason.DISCONNECTED)
+                }
+            }
+        }
+    }
+
+    fun onPageShown(item: FileItem) {
+        currentDocumentId = item.documentId
     }
 
     fun load() {
@@ -67,12 +88,16 @@ class ImageViewerViewModel(
                 _state.value = ViewerState(
                     isLoading = false,
                     items = playlist,
-                    initialIndex = MediaNavigation.startIndex(playlist, route.startDocumentId),
+                    initialIndex = MediaNavigation.startIndex(playlist, currentDocumentId),
                 )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: StorageException) {
-                _state.value = ViewerState(isLoading = false, error = e.reason)
+                val available = storageRepository.storages.value.firstOrNull { it.id == route.storageId }?.canBrowse == true
+                _state.value = ViewerState(
+                    isLoading = false,
+                    error = if (available) e.reason else StorageException.Reason.DISCONNECTED,
+                )
             }
         }
     }
@@ -88,6 +113,7 @@ class ImageViewerViewModel(
                     fileRepository = appContainer.fileRepository,
                     settingsRepository = appContainer.settingsRepository,
                     fileDetailsRepository = appContainer.fileDetailsRepository,
+                    storageRepository = appContainer.storageRepository,
                 )
             }
         }

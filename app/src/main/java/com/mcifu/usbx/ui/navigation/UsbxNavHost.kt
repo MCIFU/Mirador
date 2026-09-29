@@ -35,6 +35,7 @@ fun UsbxNavHost() {
                 },
                 onOpenFolder = { route -> navController.navigate(route) },
                 onOpenImage = { route -> navController.navigate(route) },
+                onGoHome = { navController.popBackStack(HomeRoute, inclusive = false) },
                 returnedFromDocumentId = lastViewed,
                 onReturnHandled = { entry.savedStateHandle[KEY_LAST_VIEWED] = null },
             )
@@ -45,6 +46,7 @@ fun UsbxNavHost() {
                     navController.previousBackStackEntry?.savedStateHandle?.set(KEY_LAST_VIEWED, lastDocumentId)
                     navController.popBackStack()
                 },
+                onGoHome = { navController.popBackStack(HomeRoute, inclusive = false) },
             )
         }
     }

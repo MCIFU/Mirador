@@ -32,10 +32,14 @@ internal fun EmptyFolder(hiddenCount: Int = 0) {
 }
 
 @Composable
-internal fun ErrorState(reason: StorageException.Reason, onRetry: () -> Unit) {
+internal fun ErrorState(
+    reason: StorageException.Reason,
+    onRetry: () -> Unit,
+    onGoHome: (() -> Unit)? = null,
+) {
     val (title, body) = when (reason) {
         StorageException.Reason.DISCONNECTED ->
-            "La memoria USB se ha desconectado" to "Vuelve a conectarla para seguir."
+            "La memoria USB se ha desconectado" to "Vuelve a conectarla y USBX continuará donde estabas."
         StorageException.Reason.PERMISSION_DENIED ->
             "Sin permiso de acceso" to "Android ha retirado el acceso a esta memoria. Vuelve al inicio y concédelo de nuevo."
         StorageException.Reason.NOT_FOUND ->
@@ -54,7 +58,15 @@ internal fun ErrorState(reason: StorageException.Reason, onRetry: () -> Unit) {
         },
         title = title,
         body = body,
-        action = { Button(onClick = onRetry) { Text("Reintentar") } },
+        action = {
+            val needsHome = reason == StorageException.Reason.DISCONNECTED ||
+                reason == StorageException.Reason.PERMISSION_DENIED
+            if (needsHome && onGoHome != null) {
+                Button(onClick = onGoHome) { Text("Ir al inicio") }
+            } else {
+                Button(onClick = onRetry) { Text("Reintentar") }
+            }
+        },
     )
 }
 

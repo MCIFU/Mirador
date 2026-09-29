@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.toRoute
 import com.mcifu.usbx.domain.FileSorter
+import com.mcifu.usbx.domain.connectionChanges
 import com.mcifu.usbx.domain.model.BrowserSettings
 import com.mcifu.usbx.domain.model.FileDetails
 import com.mcifu.usbx.domain.model.FileItem
@@ -27,9 +28,12 @@ import com.mcifu.usbx.ui.navigation.ImageViewerRoute
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -98,8 +102,35 @@ class BrowserViewModel(
                 BrowserState(route.path.lastOrNull().orEmpty(), route.path, settingsRepository.browserSettings.value),
             )
 
+    /** Mensajes puntuales para la interfaz (p. ej. "Memoria USB reconectada"). */
+    // Sin buffer: si la carpeta no está en pantalla, el mensaje no se guarda para después.
+    private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val messages: SharedFlow<String> = _messages.asSharedFlow()
+
     init {
         load(forceRefresh = false)
+        observeConnection()
+    }
+
+    /**
+     * Desconexión: se descarta el contenido (ya no es legible) y se muestra el aviso.
+     * Reconexión de la misma memoria: se recarga sola; la posición de scroll se conserva
+     * porque el estado de la lista vive en la pantalla.
+     */
+    private fun observeConnection() {
+        viewModelScope.launch {
+            storageRepository.storages.connectionChanges(location.storageId).collect { connected ->
+                if (connected) {
+                    fileRepository.invalidate(location.storageId)
+                    load(forceRefresh = true)
+                    _messages.tryEmit("Memoria USB reconectada")
+                } else {
+                    loadJob?.cancel()
+                    fileRepository.invalidate(location.storageId)
+                    load.value = LoadState(isLoading = false, error = StorageException.Reason.DISCONNECTED)
+                }
+            }
+        }
     }
 
     fun refresh() = load(forceRefresh = true)
@@ -120,6 +151,10 @@ class BrowserViewModel(
                     error = null,
                 )
             }
+            if (!isStorageAvailable()) {
+                load.value = LoadState(isLoading = false, error = StorageException.Reason.DISCONNECTED)
+                return@launch
+            }
             if (cached != null) {
                 load.update { it.copy(isLoading = false) }
                 return@launch
@@ -130,18 +165,20 @@ class BrowserViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: StorageException) {
-                val storageGone = storageRepository.storages.value
-                    .firstOrNull { it.id == location.storageId }?.isAvailable == false
                 load.update {
                     it.copy(
+                        raw = null,
                         isLoading = false,
                         isRefreshing = false,
-                        error = if (storageGone) StorageException.Reason.DISCONNECTED else e.reason,
+                        error = if (isStorageAvailable()) e.reason else StorageException.Reason.DISCONNECTED,
                     )
                 }
             }
         }
     }
+
+    private fun isStorageAvailable(): Boolean =
+        storageRepository.storages.value.firstOrNull { it.id == location.storageId }?.canBrowse == true
 
     suspend fun loadDetails(item: FileItem): FileDetails =
         fileDetailsRepository.loadDetails(item, storageLabel = route.path.first(), parentPath = route.path)

@@ -58,6 +58,7 @@ fun BrowserScreen(
     onNavigateToDepth: (Int) -> Unit,
     onOpenFolder: (BrowserRoute) -> Unit,
     onOpenImage: (ImageViewerRoute) -> Unit,
+    onGoHome: () -> Unit,
     returnedFromDocumentId: String?,
     onReturnHandled: () -> Unit,
     viewModel: BrowserViewModel = viewModel(factory = BrowserViewModel.Factory),
@@ -101,6 +102,10 @@ fun BrowserScreen(
                 scope.launch { snackbar.showSnackbar("No hay aplicaciones con las que compartir.") }
             }
         }
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.messages.collect { snackbar.showSnackbar(it) }
     }
 
     // Al volver del visor, deja visible la última imagen vista (como una galería).
@@ -169,7 +174,7 @@ fun BrowserScreen(
                 state.isLoading -> Box(Modifier.fillMaxSize()) {
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
                 }
-                state.error != null -> ErrorState(state.error!!, onRetry = viewModel::refresh)
+                state.error != null -> ErrorState(state.error!!, onRetry = viewModel::refresh, onGoHome = onGoHome)
                 state.items.isEmpty() -> EmptyFolder()
                 state.settings.viewMode == ViewMode.GRID -> FileGrid(
                     items = state.items,
