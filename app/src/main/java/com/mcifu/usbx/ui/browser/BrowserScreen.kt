@@ -21,6 +21,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -29,17 +31,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.ViewMode
+import com.mcifu.usbx.ui.common.CannotOpenDialog
+import com.mcifu.usbx.ui.common.ExternalActions
+import com.mcifu.usbx.ui.common.FileInfoDialog
 import com.mcifu.usbx.ui.navigation.BrowserRoute
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,9 +62,40 @@ fun BrowserScreen(
     var showSettings by rememberSaveable { mutableStateOf(false) }
     val gridState = rememberLazyGridState()
     val listState = rememberLazyListState()
+    val context = LocalContext.current
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    var actionsFor by remember { mutableStateOf<FileItem?>(null) }
+    var infoFor by remember { mutableStateOf<FileItem?>(null) }
+    var cannotOpen by remember { mutableStateOf<Pair<FileItem, Boolean>?>(null) }
+
+    fun openExternally(item: FileItem) {
+        when (val result = ExternalActions.open(context, item)) {
+            ExternalActions.OpenResult.Opened -> Unit
+            is ExternalActions.OpenResult.NoApp -> cannotOpen = item to result.canOpenGeneric
+        }
+    }
 
     fun open(item: FileItem) {
-        if (item.isDirectory) onOpenFolder(viewModel.childRoute(item))
+        when {
+            item.isDirectory -> onOpenFolder(viewModel.childRoute(item))
+            else -> openExternally(item)
+        }
+    }
+
+    fun onAction(item: FileItem, action: FileAction) {
+        actionsFor = null
+        when (action) {
+            FileAction.OPEN -> open(item)
+            FileAction.OPEN_WITH -> if (!ExternalActions.openWith(context, item)) {
+                scope.launch { snackbar.showSnackbar("No hay aplicaciones para abrir este archivo.") }
+            }
+            FileAction.INFO -> infoFor = item
+            FileAction.SHARE -> if (!ExternalActions.share(context, listOf(item))) {
+                scope.launch { snackbar.showSnackbar("No hay aplicaciones con las que compartir.") }
+            }
+        }
     }
 
     Scaffold(
@@ -99,6 +139,7 @@ fun BrowserScreen(
                 }
             }
         },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -118,17 +159,35 @@ fun BrowserScreen(
                     state = gridState,
                     contentPadding = contentPadding,
                     onClick = ::open,
-                    onLongClick = {},
+                    onLongClick = { actionsFor = it },
                 )
                 else -> FileList(
                     items = state.items,
                     state = listState,
                     contentPadding = contentPadding,
                     onClick = ::open,
-                    onMore = {},
+                    onMore = { actionsFor = it },
                 )
             }
         }
+    }
+
+    actionsFor?.let { item ->
+        FileActionsSheet(item = item, onAction = { onAction(item, it) }, onDismiss = { actionsFor = null })
+    }
+    infoFor?.let { item ->
+        FileInfoDialog(item = item, loadDetails = viewModel::loadDetails, onDismiss = { infoFor = null })
+    }
+    cannotOpen?.let { (item, canOpenGeneric) ->
+        CannotOpenDialog(
+            fileName = item.name,
+            canOpenGeneric = canOpenGeneric,
+            onOpenWithOther = {
+                cannotOpen = null
+                ExternalActions.openWith(context, item, anyType = true)
+            },
+            onDismiss = { cannotOpen = null },
+        )
     }
 
     if (showSettings) {

@@ -6,11 +6,13 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import com.mcifu.usbx.data.settings.DataStoreSettingsRepository
+import com.mcifu.usbx.data.storage.AndroidFileDetailsRepository
 import com.mcifu.usbx.data.storage.AndroidStorageRepository
 import com.mcifu.usbx.data.storage.SafFileRepository
 import com.mcifu.usbx.data.thumbnail.ThumbnailFetcher
 import com.mcifu.usbx.data.thumbnail.ThumbnailGenerator
 import com.mcifu.usbx.data.thumbnail.ThumbnailKeyer
+import com.mcifu.usbx.domain.repository.FileDetailsRepository
 import com.mcifu.usbx.domain.repository.FileRepository
 import com.mcifu.usbx.domain.repository.SettingsRepository
 import com.mcifu.usbx.domain.repository.StorageRepository
@@ -31,6 +33,8 @@ class AppContainer(context: Context) {
     val storageRepository: StorageRepository = AndroidStorageRepository(appContext, appScope)
 
     val fileRepository: FileRepository = SafFileRepository(appContext)
+
+    val fileDetailsRepository: FileDetailsRepository = AndroidFileDetailsRepository(appContext)
 
     val settingsRepository: SettingsRepository = DataStoreSettingsRepository(appContext, appScope)
 

@@ -10,9 +10,11 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.toRoute
 import com.mcifu.usbx.domain.FileSorter
 import com.mcifu.usbx.domain.model.BrowserSettings
+import com.mcifu.usbx.domain.model.FileDetails
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.FolderLocation
 import com.mcifu.usbx.domain.model.StorageException
+import com.mcifu.usbx.domain.repository.FileDetailsRepository
 import com.mcifu.usbx.domain.repository.FileRepository
 import com.mcifu.usbx.domain.repository.SettingsRepository
 import com.mcifu.usbx.domain.repository.StorageRepository
@@ -54,6 +56,7 @@ class BrowserViewModel(
     private val fileRepository: FileRepository,
     private val storageRepository: StorageRepository,
     private val settingsRepository: SettingsRepository,
+    private val fileDetailsRepository: FileDetailsRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<BrowserRoute>()
@@ -136,6 +139,9 @@ class BrowserViewModel(
         }
     }
 
+    suspend fun loadDetails(item: FileItem): FileDetails =
+        fileDetailsRepository.loadDetails(item, storageLabel = route.path.first(), parentPath = route.path)
+
     fun childRoute(folder: FileItem) = BrowserRoute(
         storageId = route.storageId,
         treeUri = route.treeUri,
@@ -151,6 +157,7 @@ class BrowserViewModel(
                     fileRepository = appContainer.fileRepository,
                     storageRepository = appContainer.storageRepository,
                     settingsRepository = appContainer.settingsRepository,
+                    fileDetailsRepository = appContainer.fileDetailsRepository,
                 )
             }
         }
