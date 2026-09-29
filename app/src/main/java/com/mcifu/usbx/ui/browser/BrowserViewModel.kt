@@ -25,6 +25,7 @@ import com.mcifu.usbx.domain.repository.SettingsRepository
 import com.mcifu.usbx.domain.repository.StorageRepository
 import com.mcifu.usbx.ui.common.appContainer
 import com.mcifu.usbx.ui.navigation.BrowserRoute
+import com.mcifu.usbx.ui.navigation.MultiviewRoute
 import com.mcifu.usbx.ui.navigation.ViewerRoute
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -189,6 +190,14 @@ class BrowserViewModel(
         treeUri = route.treeUri,
         folderDocumentId = route.documentId,
         startDocumentId = image.documentId,
+        path = route.path,
+    )
+
+    fun multiviewRoute(item: FileItem) = MultiviewRoute(
+        storageId = route.storageId,
+        treeUri = route.treeUri,
+        folderDocumentId = route.documentId,
+        firstDocumentId = item.documentId,
         path = route.path,
     )
 

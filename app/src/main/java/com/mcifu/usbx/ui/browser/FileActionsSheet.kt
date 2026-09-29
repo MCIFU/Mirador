@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,7 +34,7 @@ import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.ui.common.Formatters
 import com.mcifu.usbx.ui.common.label
 
-enum class FileAction { OPEN, OPEN_WITH, INFO, SHARE }
+enum class FileAction { OPEN, OPEN_WITH, MULTIVIEW, INFO, SHARE }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,6 +71,9 @@ fun FileActionsSheet(
             ActionRow(Icons.AutoMirrored.Outlined.OpenInNew, "Abrir") { onAction(FileAction.OPEN) }
             if (!item.isDirectory) {
                 ActionRow(Icons.Outlined.Apps, "Abrir con…") { onAction(FileAction.OPEN_WITH) }
+            }
+            if (item.type.isVisualMedia) {
+                ActionRow(Icons.Outlined.ViewAgenda, "Comparar en multiview") { onAction(FileAction.MULTIVIEW) }
             }
             ActionRow(Icons.Outlined.Info, "Información") { onAction(FileAction.INFO) }
             if (!item.isDirectory) {

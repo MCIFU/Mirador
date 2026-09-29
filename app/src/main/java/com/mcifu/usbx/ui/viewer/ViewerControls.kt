@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.ScreenRotation
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.StayCurrentLandscape
 import androidx.compose.material.icons.outlined.StayCurrentPortrait
+import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material3.AlertDialog
@@ -77,6 +78,7 @@ internal fun ViewerTopBar(
     onOpenWith: () -> Unit,
     onChooseScope: () -> Unit,
     onToggleFilmstrip: () -> Unit,
+    onMultiview: (() -> Unit)?,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Box(
@@ -106,6 +108,13 @@ internal fun ViewerTopBar(
                         leadingIcon = { Icon(Icons.Outlined.Apps, null) },
                         onClick = { menuOpen = false; onOpenWith() },
                     )
+                    if (onMultiview != null) {
+                        DropdownMenuItem(
+                            text = { Text("Comparar en multiview") },
+                            leadingIcon = { Icon(Icons.Outlined.ViewAgenda, null) },
+                            onClick = { menuOpen = false; onMultiview() },
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Qué recorrer al deslizar…") },
                         leadingIcon = { Icon(Icons.Outlined.Checklist, null) },

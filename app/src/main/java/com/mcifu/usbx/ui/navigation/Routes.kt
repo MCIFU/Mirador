@@ -31,3 +31,13 @@ data class ViewerRoute(
     val startDocumentId: String,
     val path: List<String>,
 )
+
+/** Multiview: dos fotos o vídeos de la misma carpeta a la vez. */
+@Serializable
+data class MultiviewRoute(
+    val storageId: String,
+    val treeUri: String,
+    val folderDocumentId: String,
+    val firstDocumentId: String,
+    val path: List<String>,
+)

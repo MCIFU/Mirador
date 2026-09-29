@@ -48,6 +48,7 @@ import com.mcifu.usbx.ui.common.CannotOpenDialog
 import com.mcifu.usbx.ui.common.ExternalActions
 import com.mcifu.usbx.ui.common.FileInfoDialog
 import com.mcifu.usbx.ui.navigation.BrowserRoute
+import com.mcifu.usbx.ui.navigation.MultiviewRoute
 import com.mcifu.usbx.ui.navigation.ViewerRoute
 import kotlinx.coroutines.launch
 
@@ -58,6 +59,7 @@ fun BrowserScreen(
     onNavigateToDepth: (Int) -> Unit,
     onOpenFolder: (BrowserRoute) -> Unit,
     onOpenViewer: (ViewerRoute) -> Unit,
+    onOpenMultiview: (MultiviewRoute) -> Unit,
     onGoHome: () -> Unit,
     returnedFromDocumentId: String?,
     onReturnHandled: () -> Unit,
@@ -97,6 +99,7 @@ fun BrowserScreen(
             FileAction.OPEN_WITH -> if (!ExternalActions.openWith(context, item)) {
                 scope.launch { snackbar.showSnackbar("No hay aplicaciones para abrir este archivo.") }
             }
+            FileAction.MULTIVIEW -> onOpenMultiview(viewModel.multiviewRoute(item))
             FileAction.INFO -> infoFor = item
             FileAction.SHARE -> if (!ExternalActions.share(context, listOf(item))) {
                 scope.launch { snackbar.showSnackbar("No hay aplicaciones con las que compartir.") }

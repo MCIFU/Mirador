@@ -26,6 +26,7 @@ import com.mcifu.usbx.domain.repository.FileRepository
 import com.mcifu.usbx.domain.repository.SettingsRepository
 import com.mcifu.usbx.domain.repository.StorageRepository
 import com.mcifu.usbx.ui.common.appContainer
+import com.mcifu.usbx.ui.navigation.MultiviewRoute
 import com.mcifu.usbx.ui.navigation.ViewerRoute
 import com.mcifu.usbx.ui.player.VideoPlayerController
 import kotlinx.coroutines.CancellationException
@@ -170,6 +171,14 @@ class ViewerViewModel(
     fun setFilmstrip(visible: Boolean) {
         viewModelScope.launch { settingsRepository.updateViewerSettings { it.copy(showFilmstrip = visible) } }
     }
+
+    fun multiviewRoute(item: FileItem) = MultiviewRoute(
+        storageId = route.storageId,
+        treeUri = route.treeUri,
+        folderDocumentId = route.folderDocumentId,
+        firstDocumentId = item.documentId,
+        path = route.path,
+    )
 
     fun isViewableImage(item: FileItem) = MediaNavigation.isViewableImage(item, Build.VERSION.SDK_INT)
 

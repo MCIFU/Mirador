@@ -47,6 +47,7 @@ import com.mcifu.usbx.ui.common.CannotOpenDialog
 import com.mcifu.usbx.ui.common.ExternalActions
 import com.mcifu.usbx.ui.common.FileInfoDialog
 import com.mcifu.usbx.ui.common.mediaSharedBounds
+import com.mcifu.usbx.ui.navigation.MultiviewRoute
 import com.mcifu.usbx.ui.player.CenterControls
 import com.mcifu.usbx.ui.player.LockOverlay
 import com.mcifu.usbx.ui.player.PlayerBottomControls
@@ -72,6 +73,7 @@ private const val PLAYER_CONTROLS_TIMEOUT_MS = 3_500L
 fun ViewerScreen(
     onBack: (lastDocumentId: String?) -> Unit,
     onGoHome: () -> Unit,
+    onOpenMultiview: (MultiviewRoute) -> Unit,
     viewModel: ViewerViewModel = viewModel(factory = ViewerViewModel.Factory),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -95,6 +97,9 @@ fun ViewerScreen(
 
     // Pausa al salir de la app; la pantalla no se apaga mientras se reproduce.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { controller.pause() }
+    // Al ir a otra pantalla (multiview) el vídeo se detiene y libera el decodificador (el multiview
+    // necesita dos); la posición se recuerda y al volver continúa donde estaba.
+    DisposableEffect(Unit) { onDispose { controller.setItem(null) } }
     val view = LocalView.current
     DisposableEffect(playerState.isPlaying) {
         view.keepScreenOn = playerState.isPlaying
@@ -260,6 +265,9 @@ fun ViewerScreen(
                             onOpenWith = { current?.let { controller.pause(); ExternalActions.openWith(context, it) } },
                             onChooseScope = { showScopeDialog = true },
                             onToggleFilmstrip = { viewModel.setFilmstrip(!settings.showFilmstrip) },
+                            onMultiview = current?.takeIf { it.type.isVisualMedia }?.let { item ->
+                                { onOpenMultiview(viewModel.multiviewRoute(item)) }
+                            },
                         )
                     }
 

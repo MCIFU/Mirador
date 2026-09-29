@@ -15,6 +15,7 @@ import com.mcifu.usbx.ui.browser.BrowserScreen
 import com.mcifu.usbx.ui.common.LocalNavAnimatedScope
 import com.mcifu.usbx.ui.common.LocalSharedTransitionScope
 import com.mcifu.usbx.ui.home.HomeScreen
+import com.mcifu.usbx.ui.multiview.MultiviewScreen
 import com.mcifu.usbx.ui.viewer.ViewerScreen
 
 private const val KEY_LAST_VIEWED = "last_viewed_document"
@@ -46,6 +47,7 @@ fun UsbxNavHost() {
                             },
                             onOpenFolder = { route -> navController.navigate(route) },
                             onOpenViewer = { route -> navController.navigate(route) },
+                            onOpenMultiview = { route -> navController.navigate(route) },
                             onGoHome = { navController.popBackStack(HomeRoute, inclusive = false) },
                             returnedFromDocumentId = lastViewed,
                             onReturnHandled = { entry.savedStateHandle[KEY_LAST_VIEWED] = null },
@@ -59,6 +61,15 @@ fun UsbxNavHost() {
                                 navController.previousBackStackEntry?.savedStateHandle?.set(KEY_LAST_VIEWED, lastDocumentId)
                                 navController.popBackStack()
                             },
+                            onGoHome = { navController.popBackStack(HomeRoute, inclusive = false) },
+                            onOpenMultiview = { route -> navController.navigate(route) },
+                        )
+                    }
+                }
+                composable<MultiviewRoute> {
+                    CompositionLocalProvider(LocalNavAnimatedScope provides this) {
+                        MultiviewScreen(
+                            onBack = { navController.popBackStack() },
                             onGoHome = { navController.popBackStack(HomeRoute, inclusive = false) },
                         )
                     }
