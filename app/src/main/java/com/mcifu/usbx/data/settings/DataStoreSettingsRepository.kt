@@ -54,6 +54,7 @@ class DataStoreSettingsRepository(
             prefs[VIEWER_SCOPE] = updated.scope.name
             prefs[VIEWER_ORIENTATION] = updated.orientation.name
             prefs[VIEWER_FILMSTRIP] = updated.showFilmstrip
+            prefs[PLAYER_LOOP] = updated.loopMode.name
         }
     }
 
@@ -63,6 +64,7 @@ class DataStoreSettingsRepository(
             scope = enumOrDefault(this[VIEWER_SCOPE], defaults.scope),
             orientation = enumOrDefault(this[VIEWER_ORIENTATION], defaults.orientation),
             showFilmstrip = this[VIEWER_FILMSTRIP] ?: defaults.showFilmstrip,
+            loopMode = enumOrDefault(this[PLAYER_LOOP], defaults.loopMode),
         )
     }
 
@@ -95,5 +97,6 @@ class DataStoreSettingsRepository(
         val VIEWER_SCOPE = stringPreferencesKey("viewer_scope")
         val VIEWER_ORIENTATION = stringPreferencesKey("viewer_orientation")
         val VIEWER_FILMSTRIP = booleanPreferencesKey("viewer_filmstrip")
+        val PLAYER_LOOP = stringPreferencesKey("player_loop_mode")
     }
 }

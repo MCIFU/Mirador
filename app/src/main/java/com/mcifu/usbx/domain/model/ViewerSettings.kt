@@ -1,5 +1,7 @@
 package com.mcifu.usbx.domain.model
 
+import com.mcifu.usbx.domain.LoopMode
+
 /** Qué elementos recorre el visor al deslizar. */
 enum class ViewerScope {
     /** Solo imágenes que el visor interno sabe mostrar. */
@@ -21,4 +23,6 @@ data class ViewerSettings(
     val scope: ViewerScope = ViewerScope.VISUAL_MEDIA,
     val orientation: OrientationMode = OrientationMode.AUTO,
     val showFilmstrip: Boolean = true,
+    /** Por defecto el vídeo se repite (fin → vuelve al principio). */
+    val loopMode: LoopMode = LoopMode.REPEAT_ONE,
 )
