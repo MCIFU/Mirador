@@ -223,8 +223,9 @@ abierta y, si es posible, el log (`adb logcat | grep -i usbx`).
   lo tienen abierto; USBX abre cada archivo el mínimo tiempo posible. Conviene comprobarlo
   en la prueba 18.
 - **GIF animados** se animan en el visor; en la cuadrícula se ve el primer fotograma.
-- **Zoom nítido** requiere que Android sepa decodificar por regiones el formato (JPEG, PNG, WebP y
-  HEIF sí). En otros formatos el zoom funciona pero con la resolución de pantalla.
+- **Zoom nítido** requiere que Android sepa decodificar el formato por regiones. JPEG, PNG y WebP
+  siempre; para el resto (HEIC, BMP…) USBX lo comprueba al abrir cada archivo y, si no se puede,
+  hace zoom sobre la imagen a resolución de pantalla (menos detalle al ampliar, pero sin bloqueos).
 - **Girar** es solo visual y no se guarda: modificar archivos llegará con la Fase 5.
 - **HEIC/HEIF** necesita Android 9+ y **AVIF** Android 12+ (el M52 cumple ambos).
 - TIFF, RAW (DNG) y SVG se abren con otras apps.

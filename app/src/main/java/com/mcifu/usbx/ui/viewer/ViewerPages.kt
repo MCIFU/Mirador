@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.size.Size
+import com.mcifu.usbx.data.image.RegionDecoding
+import com.mcifu.usbx.data.storage.contentUri
 import com.mcifu.usbx.data.thumbnail.toThumbnail
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.FileType
@@ -93,8 +96,15 @@ internal fun ImagePage(
 ) {
     val context = LocalContext.current
     var failed by remember(item.uri) { mutableStateOf(false) }
-    val request = remember(item.uri, targetSize) {
-        viewerImageRequest(context, item, targetSize, onError = { failed = true })
+    // Zoom por teselas solo si Android sabe decodificar el formato por regiones; si no
+    // (BMP, algunos HEIC), zoom sobre la imagen completa a tamaño de pantalla.
+    val subsampling by produceState(RegionDecoding.knownSupport(item), item.uri) {
+        if (value == null) value = RegionDecoding.supports(context, item, item.contentUri)
+    }
+    val request = remember(item.uri, targetSize, subsampling) {
+        subsampling?.let { allowed ->
+            viewerImageRequest(context, item, targetSize, allowSubsampling = allowed, onError = { failed = true })
+        }
     }
     val zoomState = rememberZoomableImageState(rememberZoomableState(zoomSpec = ZoomSpec(maxZoomFactor = MAX_ZOOM_FACTOR)))
     val zoomable = zoomState.zoomableState
@@ -120,7 +130,7 @@ internal fun ImagePage(
                 onTap = onTap,
             )
         } else {
-            Box(Modifier.fillMaxSize().rotatedContent(rotation) { animatedRotation }) {
+            if (request != null) Box(Modifier.fillMaxSize().rotatedContent(rotation) { animatedRotation }) {
                 ZoomableAsyncImage(
                     model = request,
                     contentDescription = item.name,

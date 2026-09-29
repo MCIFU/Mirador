@@ -21,6 +21,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import coil3.size.Size
+import com.mcifu.usbx.data.image.FullImage
 import com.mcifu.usbx.data.storage.contentUri
 import com.mcifu.usbx.data.thumbnail.toThumbnail
 import com.mcifu.usbx.domain.model.FileItem
@@ -32,10 +33,11 @@ internal fun viewerImageRequest(
     context: Context,
     item: FileItem,
     targetSize: Size,
+    allowSubsampling: Boolean = true,
     onError: () -> Unit = {},
 ): ImageRequest =
     ImageRequest.Builder(context)
-        .data(item.contentUri)
+        .data(if (allowSubsampling) item.contentUri else FullImage(item.contentUri, item.mimeType))
         .size(targetSize)
         .memoryCacheKey("viewer:${item.uri}:${item.lastModified}:${targetSize.width}x${targetSize.height}")
         // Mientras llega la foto se muestra su miniatura (ya en memoria desde el explorador):

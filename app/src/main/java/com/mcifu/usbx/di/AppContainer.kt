@@ -9,6 +9,8 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
+import com.mcifu.usbx.data.image.FullImageFetcher
+import com.mcifu.usbx.data.image.FullImageKeyer
 import com.mcifu.usbx.data.settings.DataStoreSettingsRepository
 import com.mcifu.usbx.data.storage.AndroidFileDetailsRepository
 import com.mcifu.usbx.data.storage.AndroidStorageRepository
@@ -67,6 +69,8 @@ class AppContainer(context: Context) {
         .components {
             // GIF, WebP y HEIF animados (Android 9+ decodifica con ImageDecoder).
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) add(AnimatedImageDecoder.Factory()) else add(GifDecoder.Factory())
+            add(FullImageKeyer())
+            add(FullImageFetcher.Factory())
             add(ThumbnailKeyer())
             add(ThumbnailFetcher.Factory(ThumbnailGenerator(appContext), thumbnailDispatcher, thumbnailFailures))
         }
