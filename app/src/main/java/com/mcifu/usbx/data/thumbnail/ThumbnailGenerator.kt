@@ -5,12 +5,15 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
+import android.graphics.Point
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import android.provider.DocumentsContract
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
+import com.mcifu.usbx.data.diagnostics.Diagnostics
 import com.mcifu.usbx.domain.model.FileType
 import kotlin.math.abs
 import kotlin.math.max
@@ -39,9 +42,11 @@ class ThumbnailGenerator(private val context: Context) {
             FileType.AUDIO -> audioThumbnail(thumbnail.uri, targetPx)
             else -> null
         }?.let { scaleToShortSide(it, targetPx) }
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Diagnostics.log("MINIATURA", "Fallo ${thumbnail.type} ${thumbnail.mimeType} ${thumbnail.uri.lastPathSegment}", e)
         null
-    } catch (_: OutOfMemoryError) {
+    } catch (e: OutOfMemoryError) {
+        Diagnostics.log("MINIATURA", "Sin memoria ${thumbnail.uri.lastPathSegment}", e)
         null
     }
 
@@ -107,22 +112,50 @@ class ThumbnailGenerator(private val context: Context) {
 
     // --- Vídeo y audio -----------------------------------------------------------------------
 
+    /**
+     * Fotograma de vídeo con tres intentos, porque algunos proveedores o formatos fallan con uno:
+     * 1. MediaMetadataRetriever con el descriptor de archivo (lo más rápido).
+     * 2. MediaMetadataRetriever con el URI (el sistema abre el archivo a su manera).
+     * 3. La miniatura que ofrezca el propio proveedor de documentos.
+     */
     private fun videoThumbnail(uri: Uri, targetPx: Int): Bitmap? {
+        val viaDescriptor = runCatching {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                frameWith(targetPx) { setDataSource(pfd.fileDescriptor) }
+            }
+        }.onFailure { Diagnostics.log("MINIATURA", "Vídeo (descriptor) ${uri.lastPathSegment}", it) }.getOrNull()
+        if (viaDescriptor != null) return viaDescriptor
+
+        val viaUri = runCatching { frameWith(targetPx) { setDataSource(context, uri) } }
+            .onFailure { Diagnostics.log("MINIATURA", "Vídeo (URI) ${uri.lastPathSegment}", it) }.getOrNull()
+        if (viaUri != null) return viaUri
+
+        val viaProvider = runCatching {
+            DocumentsContract.getDocumentThumbnail(context.contentResolver, uri, Point(targetPx * 2, targetPx * 2), null)
+        }.onFailure { Diagnostics.log("MINIATURA", "Vídeo (proveedor) ${uri.lastPathSegment}", it) }.getOrNull()
+        if (viaProvider == null) Diagnostics.log("MINIATURA", "Vídeo sin fotograma: ${uri.lastPathSegment}")
+        return viaProvider
+    }
+
+    private fun frameWith(targetPx: Int, open: MediaMetadataRetriever.() -> Unit): Bitmap? {
         val retriever = MediaMetadataRetriever()
         try {
-            retriever.setDataSource(context, uri)
+            retriever.open()
             val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                 ?.toLongOrNull() ?: 0L
             // El primer fotograma suele ser negro (fundido); el segundo 1 es más representativo.
             val timeUs = if (durationMs > 0) min(1_000L, durationMs / 3) * 1_000 else 0L
             val box = targetPx * 2
-            fun frameAt(us: Long): Bitmap? =
+            fun frameAt(us: Long, option: Int): Bitmap? =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    retriever.getScaledFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, box, box)
+                    retriever.getScaledFrameAtTime(us, option, box, box)
                 } else {
-                    retriever.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    retriever.getFrameAtTime(us, option)
                 }
-            return frameAt(timeUs) ?: if (timeUs != 0L) frameAt(0L) else null
+            return frameAt(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                ?: frameAt(0L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                ?: frameAt(timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
+                ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) retriever.getFrameAtIndex(0) else null
         } finally {
             retriever.release()
         }

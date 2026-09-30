@@ -21,6 +21,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import coil3.size.Size
+import com.mcifu.usbx.data.diagnostics.Diagnostics
 import com.mcifu.usbx.data.image.FullImage
 import com.mcifu.usbx.data.storage.contentUri
 import com.mcifu.usbx.data.thumbnail.toThumbnail
@@ -43,7 +44,13 @@ internal fun viewerImageRequest(
         // Mientras llega la foto se muestra su miniatura (ya en memoria desde el explorador):
         // la transición desde la cuadrícula nunca pasa por una pantalla negra.
         .placeholderMemoryCacheKey(item.toThumbnail().cacheKey)
-        .listener(onError = { _, _ -> onError() })
+        .listener(
+            onSuccess = { _, result -> Diagnostics.log("VISOR", "Imagen cargada ${item.name} (${result.dataSource})") },
+            onError = { _, result ->
+                Diagnostics.log("VISOR", "No se pudo cargar ${item.name} (${item.mimeType})", result.throwable)
+                onError()
+            },
+        )
         .build()
 
 /**

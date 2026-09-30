@@ -21,7 +21,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CreateNewFolder
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SdCard
@@ -29,6 +31,8 @@ import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material.icons.outlined.UsbOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -50,6 +54,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -67,6 +74,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mcifu.usbx.domain.model.MountState
 import com.mcifu.usbx.domain.model.StorageKind
 import com.mcifu.usbx.domain.model.UsbStorage
+import com.mcifu.usbx.data.diagnostics.Diagnostics
+import com.mcifu.usbx.ui.common.CrashNoticeDialog
+import com.mcifu.usbx.ui.common.DiagnosticsDialog
 import com.mcifu.usbx.ui.common.Formatters
 import kotlinx.coroutines.launch
 
@@ -78,6 +88,8 @@ fun HomeScreen(
 ) {
     val storages by viewModel.storages.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    var showDiagnostics by rememberSaveable { mutableStateOf(false) }
+    var crashNotice by rememberSaveable { mutableStateOf(Diagnostics.lastCrash() != null) }
     val scope = rememberCoroutineScope()
 
     val accessLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -133,12 +145,34 @@ fun HomeScreen(
                     IconButton(onClick = viewModel::refresh) {
                         Icon(Icons.Outlined.Refresh, contentDescription = "Buscar de nuevo")
                     }
+                    var menuOpen by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(Icons.Outlined.MoreVert, contentDescription = "Más opciones")
+                        }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Informe de diagnóstico") },
+                                leadingIcon = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
+                                onClick = { menuOpen = false; showDiagnostics = true },
+                            )
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
+        if (crashNotice) {
+            CrashNoticeDialog(
+                onShowReport = { crashNotice = false; showDiagnostics = true },
+                onDismiss = { crashNotice = false; Diagnostics.clearCrash() },
+            )
+        }
+        if (showDiagnostics) {
+            DiagnosticsDialog(storages = storages, onDismiss = { showDiagnostics = false })
+        }
         val available = storages.filter { it.kind != StorageKind.FOLDER || it.isAuthorized }
         if (available.none { it.kind != StorageKind.FOLDER }) {
             EmptyState(

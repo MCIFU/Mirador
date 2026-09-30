@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.size.Size
+import com.mcifu.usbx.data.diagnostics.Diagnostics
 import com.mcifu.usbx.data.image.RegionDecoding
 import com.mcifu.usbx.data.storage.contentUri
 import com.mcifu.usbx.domain.model.FileItem
@@ -112,6 +113,15 @@ internal fun ImagePage(
     LaunchedEffect(rotation) { zoomable.resetZoom() }
 
     val animatedRotation by animateFloatAsState(rotation.toFloat(), tween(260), label = "rotation")
+
+    // Diagnóstico: si la foto no llega a mostrarse, queda constancia en el informe.
+    LaunchedEffect(item.uri, isCurrent) {
+        if (!isCurrent) return@LaunchedEffect
+        delay(6_000)
+        if (!zoomState.isImageDisplayed && !failed) {
+            Diagnostics.log("VISOR", "La imagen no se mostró tras 6 s: ${item.name} (subsampling=$subsampling)")
+        }
+    }
 
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (failed) {

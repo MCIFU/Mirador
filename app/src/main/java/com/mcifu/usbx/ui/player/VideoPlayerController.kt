@@ -10,6 +10,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
+import com.mcifu.usbx.data.diagnostics.Diagnostics
 import com.mcifu.usbx.data.storage.contentUri
 import com.mcifu.usbx.domain.LoopMode
 import com.mcifu.usbx.domain.PlaybackRules
@@ -95,6 +96,11 @@ class VideoPlayerController(
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            Diagnostics.log(
+                "REPRODUCTOR",
+                "Error ${error.errorCodeName} en ${_state.value.item?.name} (${_state.value.item?.mimeType})",
+                error.cause ?: error,
+            )
             _state.update { it.copy(error = error.toPlayerError(), isPlaying = false, isBuffering = false) }
         }
     }
@@ -126,6 +132,7 @@ class VideoPlayerController(
             _state.update { it.copy(item = null, isPlaying = false, positionMs = 0, durationMs = 0, error = null, hasEnded = false) }
             return
         }
+        Diagnostics.log("REPRODUCTOR", "Cargar ${item.name} (${item.mimeType}, ${item.size} bytes)")
         val player = requirePlayer()
         player.setSeekParameters(SeekParameters.DEFAULT)
         player.setMediaItem(MediaItem.fromUri(item.contentUri))

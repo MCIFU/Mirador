@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import com.mcifu.usbx.data.diagnostics.Diagnostics
 import com.mcifu.usbx.data.storage.contentUri
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.FileTypeRules
@@ -25,6 +26,7 @@ object ExternalActions {
         val intent = viewIntent(item, item.mimeType)
         return try {
             context.startActivity(intent)
+            Diagnostics.log("EXTERNO", "Abierto con otra app: ${item.name} (${item.mimeType})")
             OpenResult.Opened
         } catch (_: ActivityNotFoundException) {
             OpenResult.NoApp(canOpenGeneric = hasHandler(context, viewIntent(item, "*/*")))

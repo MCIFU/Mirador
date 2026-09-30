@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.toRoute
+import com.mcifu.usbx.data.diagnostics.Diagnostics
 import com.mcifu.usbx.domain.FileSorter
 import com.mcifu.usbx.domain.LoopMode
 import com.mcifu.usbx.domain.MediaNavigation
@@ -129,6 +130,7 @@ class ViewerViewModel(
                     val sorted = FileSorter.sort(raw, browser.sortOrder, browser.showHidden)
                     MediaNavigation.playlist(sorted, scope, Build.VERSION.SDK_INT, alwaysIncludeDocumentId = currentDocumentId)
                 }
+                Diagnostics.log("VISOR", "Lista del visor: ${playlist.size} elementos (ámbito $scope)")
                 _state.value = ViewerState(
                     isLoading = false,
                     items = playlist,
@@ -138,6 +140,7 @@ class ViewerViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: StorageException) {
+                Diagnostics.log("VISOR", "No se pudo leer la carpeta (${e.reason})", e)
                 val available = storageRepository.storages.value.firstOrNull { it.id == route.storageId }?.canBrowse == true
                 _state.value = ViewerState(
                     isLoading = false,

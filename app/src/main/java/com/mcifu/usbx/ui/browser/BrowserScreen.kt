@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mcifu.usbx.data.diagnostics.Diagnostics
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.ViewMode
 import com.mcifu.usbx.ui.common.CannotOpenDialog
@@ -87,8 +88,14 @@ fun BrowserScreen(
     fun open(item: FileItem) {
         when {
             item.isDirectory -> onOpenFolder(viewModel.childRoute(item))
-            viewModel.canViewInternally(item) -> onOpenViewer(viewModel.viewerRoute(item))
-            else -> openExternally(item)
+            viewModel.canViewInternally(item) -> {
+                Diagnostics.log("ABRIR", "${item.name} (${item.type}, ${item.mimeType}) → visor de USBX")
+                onOpenViewer(viewModel.viewerRoute(item))
+            }
+            else -> {
+                Diagnostics.log("ABRIR", "${item.name} (${item.type}, ${item.mimeType}) → otra app")
+                openExternally(item)
+            }
         }
     }
 
