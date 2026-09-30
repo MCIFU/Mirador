@@ -364,7 +364,7 @@ private const val UNLOCK_HOLD_MS = 1_000
 
 /** Error de reproducción con alternativas: reintentar o abrir con otra app. */
 @Composable
-fun PlayerErrorOverlay(error: PlayerError, onRetry: () -> Unit, onOpenWith: () -> Unit) {
+fun PlayerErrorOverlay(error: PlayerError, onRetry: () -> Unit, onOpenWith: () -> Unit, detail: String? = null) {
     Column(
         Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.75f)).padding(32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
@@ -388,6 +388,9 @@ fun PlayerErrorOverlay(error: PlayerError, onRetry: () -> Unit, onOpenWith: () -
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
         )
+        if (detail != null) {
+            Text(detail, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(onClick = onRetry) { Text("Reintentar", color = Color.White) }
             Button(onClick = onOpenWith) { Text("Abrir con otra aplicación") }

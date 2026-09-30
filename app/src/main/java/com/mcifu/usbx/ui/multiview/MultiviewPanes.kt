@@ -67,6 +67,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import com.mcifu.usbx.data.diagnostics.Diagnostics
+import com.mcifu.usbx.data.image.FullImage
 import com.mcifu.usbx.data.storage.contentUri
 import com.mcifu.usbx.data.thumbnail.toThumbnail
 import com.mcifu.usbx.domain.LoopMode
@@ -129,7 +131,13 @@ internal fun ImagePane(
     transform: ZoomTransform,
     onTransform: (ZoomTransform) -> Unit,
     modifier: Modifier = Modifier,
+    onTap: (() -> Unit)? = null,
+    onError: ((Throwable) -> Unit)? = null,
+    /** Lee el archivo con un flujo propio en vez del lector de Coil (ruta alternativa del visor). */
+    alternativeSource: Boolean = false,
 ) {
+    val tap by rememberUpdatedState(onTap)
+    val error by rememberUpdatedState(onError)
     val context = LocalContext.current
     var size by remember { mutableStateOf(IntSize.Zero) }
     val current by rememberUpdatedState(transform)
@@ -140,7 +148,7 @@ internal fun ImagePane(
             .clipToBounds()
             .onSizeChanged { size = it }
             .pointerInput(Unit) {
-                detectTapGestures(onDoubleTap = { p ->
+                detectTapGestures(onTap = { tap?.invoke() }, onDoubleTap = { p ->
                     update(MultiviewRules.doubleTap(current, p.x - size.width / 2f, p.y - size.height / 2f, size.width.toFloat(), size.height.toFloat()))
                 })
             }
@@ -159,9 +167,16 @@ internal fun ImagePane(
         if (size.width > 0) {
             val request = remember(item.uri, size) {
                 ImageRequest.Builder(context)
-                    .data(item.contentUri)
+                    .data(if (alternativeSource) FullImage(item.contentUri, item.mimeType) else item.contentUri)
                     .size((size.width * 2).coerceAtMost(4096), (size.height * 2).coerceAtMost(4096))
                     .placeholderMemoryCacheKey(item.toThumbnail().cacheKey)
+                    .listener(
+                        onSuccess = { _, result -> Diagnostics.log("VISOR", "Imagen mostrada (${if (alternativeSource) "visor alternativo" else "multiview"}): ${item.name} ${result.dataSource}") },
+                        onError = { _, result ->
+                            Diagnostics.log("VISOR", "Fallo al mostrar ${item.name}", result.throwable)
+                            error?.invoke(result.throwable)
+                        },
+                    )
                     .build()
             }
             AsyncImage(

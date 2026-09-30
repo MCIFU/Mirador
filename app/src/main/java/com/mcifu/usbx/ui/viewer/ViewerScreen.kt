@@ -44,6 +44,7 @@ import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.OrientationMode
 import com.mcifu.usbx.ui.browser.ErrorState
 import com.mcifu.usbx.ui.common.CannotOpenDialog
+import com.mcifu.usbx.ui.common.DiagnosticsDialog
 import com.mcifu.usbx.ui.common.ExternalActions
 import com.mcifu.usbx.ui.common.FileInfoDialog
 import com.mcifu.usbx.ui.common.mediaSharedBounds
@@ -85,6 +86,7 @@ fun ViewerScreen(
     var cannotOpen by remember { mutableStateOf<Pair<FileItem, Boolean>?>(null) }
     var showScopeDialog by remember { mutableStateOf(false) }
     var showSpeedSheet by remember { mutableStateOf(false) }
+    var showDiagnostics by remember { mutableStateOf(false) }
     /** Cambia con cada interacción: reinicia la cuenta atrás para ocultar controles. */
     var interactionTick by remember { mutableIntStateOf(0) }
     /** Giro visual por archivo (grados acumulados, para animar siempre por el camino corto). */
@@ -265,6 +267,7 @@ fun ViewerScreen(
                             onOpenWith = { current?.let { controller.pause(); ExternalActions.openWith(context, it) } },
                             onChooseScope = { showScopeDialog = true },
                             onToggleFilmstrip = { viewModel.setFilmstrip(!settings.showFilmstrip) },
+                            onDiagnostics = { showDiagnostics = true },
                             onMultiview = current?.takeIf { it.type.isVisualMedia }?.let { item ->
                                 { onOpenMultiview(viewModel.multiviewRoute(item)) }
                             },
@@ -350,6 +353,9 @@ fun ViewerScreen(
                 onSelect = { viewModel.setScope(it); showScopeDialog = false },
                 onDismiss = { showScopeDialog = false },
             )
+        }
+        if (showDiagnostics) {
+            DiagnosticsDialog(storages = emptyList(), onDismiss = { showDiagnostics = false })
         }
         if (showSpeedSheet) {
             SpeedSheet(

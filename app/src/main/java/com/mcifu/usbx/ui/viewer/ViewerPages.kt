@@ -42,6 +42,8 @@ import coil3.request.ImageRequest
 import coil3.size.Size
 import com.mcifu.usbx.data.diagnostics.Diagnostics
 import com.mcifu.usbx.data.image.RegionDecoding
+import com.mcifu.usbx.domain.ZoomTransform
+import com.mcifu.usbx.ui.multiview.ImagePane
 import com.mcifu.usbx.data.storage.contentUri
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.ui.common.Formatters
@@ -89,6 +91,10 @@ internal fun ImagePage(
 ) {
     val context = LocalContext.current
     var failed by remember(item.uri) { mutableStateOf(false) }
+    var errorDetail by remember(item.uri) { mutableStateOf<String?>(null) }
+    /** Visor alternativo (sin teselas) si el avanzado no consigue mostrar la foto. */
+    var useFallback by remember(item.uri) { mutableStateOf(false) }
+    var fallbackZoom by remember(item.uri) { mutableStateOf(ZoomTransform()) }
     // Zoom por teselas solo si Android sabe decodificar el formato por regiones; si no
     // (BMP, algunos HEIC), zoom sobre la imagen completa a tamaño de pantalla.
     val subsampling by produceState(RegionDecoding.knownSupport(item), item.uri) {
@@ -114,22 +120,41 @@ internal fun ImagePage(
 
     val animatedRotation by animateFloatAsState(rotation.toFloat(), tween(260), label = "rotation")
 
-    // Diagnóstico: si la foto no llega a mostrarse, queda constancia en el informe.
-    LaunchedEffect(item.uri, isCurrent) {
-        if (!isCurrent) return@LaunchedEffect
-        delay(6_000)
-        if (!zoomState.isImageDisplayed && !failed) {
-            Diagnostics.log("VISOR", "La imagen no se mostró tras 6 s: ${item.name} (subsampling=$subsampling)")
+    // Si en 4 s el visor avanzado no ha mostrado la foto, se pasa al alternativo, que la lee por
+    // otra vía y tiene su propio zoom. Queda anotado en el informe de diagnóstico.
+    LaunchedEffect(item.uri, isCurrent, failed) {
+        if (!isCurrent || useFallback) return@LaunchedEffect
+        delay(if (failed) 0 else 4_000)
+        if (!zoomState.isImageDisplayed) {
+            Diagnostics.log("VISOR", "Visor avanzado sin imagen (fallo=$failed, subsampling=$subsampling): ${item.name} → visor alternativo")
+            failed = false
+            useFallback = true
         }
+    }
+    LaunchedEffect(zoomState.isImageDisplayed) {
+        if (zoomState.isImageDisplayed) Diagnostics.log("VISOR", "Imagen mostrada (visor avanzado): ${item.name}")
     }
 
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if (failed) {
+        if (useFallback && errorDetail != null) {
             PageMessage(
                 icon = { Icon(Icons.Outlined.BrokenImage, null, tint = Color.White, modifier = Modifier.size(48.dp)) },
                 title = "No se puede mostrar esta imagen",
+                body = errorDetail,
                 action = { OutlinedButton(onClick = onOpenWith) { Text("Abrir con otra aplicación", color = Color.White) } },
                 onTap = onTap,
+            )
+        } else if (useFallback) {
+            ImagePane(
+                item = item,
+                transform = fallbackZoom,
+                onTransform = {
+                    fallbackZoom = it
+                    if (it.isZoomed) onZoomedIn()
+                },
+                onTap = onTap,
+                onError = { t -> errorDetail = "${t.javaClass.simpleName}: ${t.message}" },
+                alternativeSource = true,
             )
         } else {
             if (request != null) Box(Modifier.fillMaxSize().rotatedContent(rotation) { animatedRotation }) {

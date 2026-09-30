@@ -42,6 +42,8 @@ data class PlayerState(
     val loopMode: LoopMode = LoopMode.REPEAT_ONE,
     val fastSeek: FastSeek? = null,
     val error: PlayerError? = null,
+    /** Detalle técnico del error (código de Media3 y causa), visible en pantalla. */
+    val errorDetail: String? = null,
 )
 
 enum class PlayerError { UNSUPPORTED_FORMAT, READ_ERROR, OTHER }
@@ -101,7 +103,15 @@ class VideoPlayerController(
                 "Error ${error.errorCodeName} en ${_state.value.item?.name} (${_state.value.item?.mimeType})",
                 error.cause ?: error,
             )
-            _state.update { it.copy(error = error.toPlayerError(), isPlaying = false, isBuffering = false) }
+            val cause = error.cause
+            _state.update {
+                it.copy(
+                    error = error.toPlayerError(),
+                    errorDetail = error.errorCodeName + (cause?.let { c -> " · ${c.javaClass.simpleName}: ${c.message}" }.orEmpty()),
+                    isPlaying = false,
+                    isBuffering = false,
+                )
+            }
         }
     }
 

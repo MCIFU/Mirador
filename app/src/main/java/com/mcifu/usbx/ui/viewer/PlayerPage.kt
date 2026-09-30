@@ -110,7 +110,7 @@ internal fun PlayerPage(
                 modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 72.dp),
             )
             val error: PlayerError? = playerState.error
-            if (error != null) PlayerErrorOverlay(error, onRetry = onRetry, onOpenWith = onOpenWith)
+            if (error != null) PlayerErrorOverlay(error, onRetry = onRetry, onOpenWith = onOpenWith, detail = playerState.errorDetail)
         }
     }
 }

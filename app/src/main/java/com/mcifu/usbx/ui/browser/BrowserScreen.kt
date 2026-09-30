@@ -90,7 +90,12 @@ fun BrowserScreen(
             item.isDirectory -> onOpenFolder(viewModel.childRoute(item))
             viewModel.canViewInternally(item) -> {
                 Diagnostics.log("ABRIR", "${item.name} (${item.type}, ${item.mimeType}) → visor de USBX")
-                onOpenViewer(viewModel.viewerRoute(item))
+                try {
+                    onOpenViewer(viewModel.viewerRoute(item))
+                } catch (e: Exception) {
+                    Diagnostics.log("ABRIR", "No se pudo abrir el visor", e)
+                    scope.launch { snackbar.showSnackbar("No se pudo abrir el visor: ${e.javaClass.simpleName}: ${e.message}") }
+                }
             }
             else -> {
                 Diagnostics.log("ABRIR", "${item.name} (${item.type}, ${item.mimeType}) → otra app")
