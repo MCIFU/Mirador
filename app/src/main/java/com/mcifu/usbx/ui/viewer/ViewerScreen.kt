@@ -268,7 +268,7 @@ fun ViewerScreen(
                             onChooseScope = { showScopeDialog = true },
                             onToggleFilmstrip = { viewModel.setFilmstrip(!settings.showFilmstrip) },
                             onDiagnostics = { showDiagnostics = true },
-                            onMultiview = current?.takeIf { it.type.isVisualMedia }?.let { item ->
+                            onMultiview = current?.takeIf { it.type.isVisualMedia && !viewModel.isExternal }?.let { item ->
                                 { onOpenMultiview(viewModel.multiviewRoute(item)) }
                             },
                         )

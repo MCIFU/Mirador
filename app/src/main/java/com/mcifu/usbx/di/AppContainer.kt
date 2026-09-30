@@ -9,6 +9,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
+import com.mcifu.usbx.data.external.ExternalOpenResolver
 import com.mcifu.usbx.data.image.FullImageFetcher
 import com.mcifu.usbx.data.image.FullImageKeyer
 import com.mcifu.usbx.data.settings.DataStoreSettingsRepository
@@ -44,6 +45,8 @@ class AppContainer(context: Context) {
     val fileRepository: FileRepository = SafFileRepository(appContext)
 
     val fileDetailsRepository: FileDetailsRepository = AndroidFileDetailsRepository(appContext)
+
+    val externalOpenResolver by lazy { ExternalOpenResolver(appContext, storageRepository, fileRepository) }
 
     val settingsRepository: SettingsRepository = DataStoreSettingsRepository(appContext, appScope)
 

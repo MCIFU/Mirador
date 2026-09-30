@@ -17,6 +17,7 @@ import com.mcifu.usbx.domain.MediaNavigation
 import com.mcifu.usbx.domain.connectionChanges
 import com.mcifu.usbx.domain.model.FileDetails
 import com.mcifu.usbx.domain.model.FileItem
+import com.mcifu.usbx.domain.model.FileTypeRules
 import com.mcifu.usbx.domain.model.FolderLocation
 import com.mcifu.usbx.domain.model.OrientationMode
 import com.mcifu.usbx.domain.model.StorageException
@@ -83,6 +84,22 @@ class ViewerViewModel(
     private val _advanceRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val advanceRequests: SharedFlow<Unit> = _advanceRequests.asSharedFlow()
 
+    /** Archivo abierto desde otra app sin acceso a su carpeta (se muestra solo él). */
+    private val externalItem: FileItem? = route.externalUri?.let { uri ->
+        val name = route.externalName ?: "Archivo"
+        val mime = FileTypeRules.effectiveMime(name, route.externalMime, isDirectory = false)
+        FileItem(
+            documentId = uri,
+            uri = uri,
+            name = name,
+            mimeType = mime,
+            type = FileTypeRules.classify(name, mime, isDirectory = false),
+            size = route.externalSize,
+            lastModified = 0L,
+        )
+    }
+    val isExternal: Boolean get() = externalItem != null
+
     /** Documento visible ahora mismo. */
     private var currentDocumentId: String = route.startDocumentId
     private var loadJob: Job? = null
@@ -118,6 +135,10 @@ class ViewerViewModel(
     }
 
     fun load() {
+        externalItem?.let { item ->
+            _state.value = ViewerState(isLoading = false, items = listOf(item), generation = _state.value.generation + 1)
+            return
+        }
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             val previous = _state.value

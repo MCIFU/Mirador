@@ -22,12 +22,22 @@ private const val KEY_LAST_VIEWED = "last_viewed_document"
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun UsbxNavHost() {
+fun UsbxNavHost(
+    startRoute: Any = HomeRoute,
+    /** Cierra la actividad (visor abierto desde otra app, al volver atrás). */
+    onExit: () -> Unit = {},
+) {
     val navController = rememberNavController()
+
+    fun goHome() {
+        if (!navController.popBackStack(HomeRoute, inclusive = false)) {
+            navController.navigate(HomeRoute) { popUpTo(0) { inclusive = true } }
+        }
+    }
 
     SharedTransitionLayout {
         CompositionLocalProvider(LocalSharedTransitionScope provides this) {
-            NavHost(navController = navController, startDestination = HomeRoute) {
+            NavHost(navController = navController, startDestination = startRoute) {
                 composable<HomeRoute> {
                     CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                         HomeScreen(onOpenStorage = { storage -> navController.navigate(storage.rootRoute()) })
@@ -48,7 +58,7 @@ fun UsbxNavHost() {
                             onOpenFolder = { route -> navController.navigate(route) },
                             onOpenViewer = { route -> navController.navigate(route) },
                             onOpenMultiview = { route -> navController.navigate(route) },
-                            onGoHome = { navController.popBackStack(HomeRoute, inclusive = false) },
+                            onGoHome = ::goHome,
                             returnedFromDocumentId = lastViewed,
                             onReturnHandled = { entry.savedStateHandle[KEY_LAST_VIEWED] = null },
                         )
@@ -59,9 +69,10 @@ fun UsbxNavHost() {
                         ViewerScreen(
                             onBack = { lastDocumentId ->
                                 navController.previousBackStackEntry?.savedStateHandle?.set(KEY_LAST_VIEWED, lastDocumentId)
-                                navController.popBackStack()
+                                // Abierto desde otra app: el visor es la primera pantalla; Atrás vuelve a esa app.
+                                if (!navController.popBackStack()) onExit()
                             },
-                            onGoHome = { navController.popBackStack(HomeRoute, inclusive = false) },
+                            onGoHome = ::goHome,
                             onOpenMultiview = { route -> navController.navigate(route) },
                         )
                     }
@@ -70,7 +81,7 @@ fun UsbxNavHost() {
                     CompositionLocalProvider(LocalNavAnimatedScope provides this) {
                         MultiviewScreen(
                             onBack = { navController.popBackStack() },
-                            onGoHome = { navController.popBackStack(HomeRoute, inclusive = false) },
+                            onGoHome = ::goHome,
                         )
                     }
                 }
