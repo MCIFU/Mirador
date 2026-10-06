@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+: el botón de reproducir aparece con un pequeño rebote al abrir la app. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:drawable="@drawable/splash_icon_static">
+    <target android:name="play">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator android:propertyName="scaleX" android:valueFrom="0.4" android:valueTo="1"
+                    android:duration="550" android:interpolator="@android:interpolator/overshoot" />
+                <objectAnimator android:propertyName="scaleY" android:valueFrom="0.4" android:valueTo="1"
+                    android:duration="550" android:interpolator="@android:interpolator/overshoot" />
+            </set>
+        </aapt:attr>
+    </target>
+</animated-vector>

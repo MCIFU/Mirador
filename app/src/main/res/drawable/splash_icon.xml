@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 8-11: icono estático (la animación de splash solo existe desde Android 12). -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android" android:drawable="@drawable/splash_icon_static" />
