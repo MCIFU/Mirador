@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.outlined.RotateLeft
 import androidx.compose.material.icons.automirrored.outlined.RotateRight
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.ScreenRotation
@@ -81,6 +82,7 @@ internal fun ViewerTopBar(
     onToggleFilmstrip: () -> Unit,
     onMultiview: (() -> Unit)?,
     onDiagnostics: () -> Unit,
+    onDelete: (() -> Unit)?,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Box(
@@ -122,6 +124,13 @@ internal fun ViewerTopBar(
                         leadingIcon = { Icon(Icons.Outlined.Checklist, null) },
                         onClick = { menuOpen = false; onChooseScope() },
                     )
+                    if (onDelete != null) {
+                        DropdownMenuItem(
+                            text = { Text("Eliminar") },
+                            leadingIcon = { Icon(Icons.Outlined.Delete, null) },
+                            onClick = { menuOpen = false; onDelete() },
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Informe de diagnóstico") },
                         leadingIcon = { Icon(Icons.Outlined.BugReport, null) },

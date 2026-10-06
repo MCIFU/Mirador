@@ -43,6 +43,7 @@ import com.mcifu.usbx.domain.PlaybackRules
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.OrientationMode
 import com.mcifu.usbx.ui.browser.ErrorState
+import com.mcifu.usbx.ui.browser.DeleteConfirmDialog
 import com.mcifu.usbx.ui.common.CannotOpenDialog
 import com.mcifu.usbx.ui.common.DiagnosticsDialog
 import com.mcifu.usbx.ui.common.ExternalActions
@@ -87,6 +88,7 @@ fun ViewerScreen(
     var showScopeDialog by remember { mutableStateOf(false) }
     var showSpeedSheet by remember { mutableStateOf(false) }
     var showDiagnostics by remember { mutableStateOf(false) }
+    var deleteRequest by remember { mutableStateOf<Pair<FileItem, FileItem?>?>(null) }
     /** Cambia con cada interacción: reinicia la cuenta atrás para ocultar controles. */
     var interactionTick by remember { mutableIntStateOf(0) }
     /** Giro visual por archivo (grados acumulados, para animar siempre por el camino corto). */
@@ -268,6 +270,12 @@ fun ViewerScreen(
                             onChooseScope = { showScopeDialog = true },
                             onToggleFilmstrip = { viewModel.setFilmstrip(!settings.showFilmstrip) },
                             onDiagnostics = { showDiagnostics = true },
+                            onDelete = current?.takeIf { viewModel.canDelete }?.let { item ->
+                                {
+                                    val index = pagerState.currentPage
+                                    deleteRequest = item to (items.getOrNull(index + 1) ?: items.getOrNull(index - 1))
+                                }
+                            },
                             onMultiview = current?.takeIf { it.type.isVisualMedia && !viewModel.isExternal }?.let { item ->
                                 { onOpenMultiview(viewModel.multiviewRoute(item)) }
                             },
@@ -352,6 +360,17 @@ fun ViewerScreen(
                 current = settings.scope,
                 onSelect = { viewModel.setScope(it); showScopeDialog = false },
                 onDismiss = { showScopeDialog = false },
+            )
+        }
+        deleteRequest?.let { (item, neighbor) ->
+            DeleteConfirmDialog(
+                items = listOf(item),
+                onConfirm = {
+                    deleteRequest = null
+                    viewModel.delete(item, neighbor)
+                    if (neighbor == null) onBack(null)
+                },
+                onDismiss = { deleteRequest = null },
             )
         }
         if (showDiagnostics) {

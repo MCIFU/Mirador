@@ -19,11 +19,13 @@ import com.mcifu.usbx.domain.model.FileDetails
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.FileTypeRules
 import com.mcifu.usbx.domain.model.FolderLocation
+import com.mcifu.usbx.domain.model.MountState
 import com.mcifu.usbx.domain.model.OrientationMode
 import com.mcifu.usbx.domain.model.StorageException
 import com.mcifu.usbx.domain.model.ViewerScope
 import com.mcifu.usbx.domain.model.ViewerSettings
 import com.mcifu.usbx.domain.repository.FileDetailsRepository
+import com.mcifu.usbx.domain.repository.FileOperations
 import com.mcifu.usbx.domain.repository.FileRepository
 import com.mcifu.usbx.domain.repository.SettingsRepository
 import com.mcifu.usbx.domain.repository.StorageRepository
@@ -66,6 +68,7 @@ class ViewerViewModel(
     private val settingsRepository: SettingsRepository,
     private val fileDetailsRepository: FileDetailsRepository,
     private val storageRepository: StorageRepository,
+    private val fileOperations: FileOperations,
     appContext: Context,
 ) : ViewModel() {
 
@@ -107,6 +110,9 @@ class ViewerViewModel(
     init {
         load()
         player.onEndedInFolderMode = { _advanceRequests.tryEmit(Unit) }
+        viewModelScope.launch {
+            fileOperations.changes.collect { storages -> if (route.storageId in storages && !isExternal) load() }
+        }
         viewModelScope.launch {
             settingsRepository.viewerSettings.map { it.loopMode }.distinctUntilChanged().collect(player::setLoopMode)
         }
@@ -179,6 +185,17 @@ class ViewerViewModel(
         viewModelScope.launch { settingsRepository.updateViewerSettings { it.copy(orientation = mode) } }
     }
 
+    /** Se puede borrar: archivo de una memoria autorizada y escribible (no abierto desde otra app). */
+    val canDelete: Boolean
+        get() = !isExternal && storageRepository.storages.value.firstOrNull { it.id == route.storageId }?.mountState == MountState.MOUNTED
+
+    /** Elimina [item]; el visor queda en [neighbor] (el siguiente, o el anterior si era el último). */
+    fun delete(item: FileItem, neighbor: FileItem?): Boolean {
+        if (player.state.value.item?.documentId == item.documentId) player.setItem(null)
+        neighbor?.let { currentDocumentId = it.documentId }
+        return fileOperations.delete(listOf(item), location)
+    }
+
     fun cycleLoopMode() {
         val next = when (settings.value.loopMode) {
             LoopMode.REPEAT_ONE -> LoopMode.PLAY_ONCE
@@ -218,6 +235,7 @@ class ViewerViewModel(
                     settingsRepository = appContainer.settingsRepository,
                     fileDetailsRepository = appContainer.fileDetailsRepository,
                     storageRepository = appContainer.storageRepository,
+                    fileOperations = appContainer.fileOperations,
                     appContext = appContainer.appContext,
                 )
             }

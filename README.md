@@ -4,7 +4,7 @@ Explorador y visor multimedia para memorias USB conectadas por USB‑C / OTG en 
 Dispositivo de referencia: **Samsung Galaxy M52 5G** (Android 14 / One UI 6), pero solo usa APIs
 públicas de Android: no hay código específico de Samsung.
 
-> **Estado: Fase 4 (multiview).** Lo que no está en la tabla de abajo como «Hecho» no está
+> **Estado: Fase 6 (pulido) — versión 0.7.0.** Lo que no está en la tabla de abajo como «Hecho» no está
 > implementado, y la app no lo aparenta.
 
 | Área | Estado |
@@ -16,8 +16,9 @@ públicas de Android: no hay código específico de Samsung.
 | Zoom nítido, doble toque, rotación, orientación, transiciones, tira de miniaturas, GIF | Hecho (Fase 2) |
 | Reproductor de vídeo y audio integrado: barra de progreso, velocidad, repetición, bloqueo, gestos | Hecho (Fase 3) |
 | Multiview: 2 fotos o 2 vídeos, zoom y reproducción sincronizables, intercambiar paneles | Hecho (Fase 4) |
-| Copiar, mover, borrar, renombrar, selección múltiple | Fase 5 |
-| Ajustes, caché avanzada, accesibilidad, diseño final | Fase 6 |
+| Abrir fotos, vídeos y audio desde otras apps («Abrir con USBX») | Hecho (0.5.0) |
+| Selección múltiple, copiar, mover, eliminar, renombrar, nueva carpeta, progreso | Hecho (Fase 5) |
+| Ajustes (tema, Material You, visor, caché), eliminar desde el visor, informe de diagnóstico | Hecho (Fase 6) |
 
 ## Instalar en el móvil
 
@@ -43,6 +44,16 @@ la descarga sola).
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ./gradlew testDebugUnitTest lintDebug    # tests unitarios y Android Lint
 ```
+
+## Abrir con USBX desde otras apps
+
+USBX se registra para abrir fotos, vídeos y audio. En **Mis archivos** (o la galería, WhatsApp…)
+toca un archivo, elige **USBX** y pulsa **Siempre**. Si la Galería o el reproductor de Samsung se
+abren directamente, quítales el «abrir por defecto» en Ajustes → Aplicaciones → (app) →
+Establecer como predeterminada → Borrar valores predeterminados.
+
+- Si USBX tiene acceso a esa memoria, el archivo se abre con su carpeta y puedes deslizar.
+- Si no, se abre solo ese archivo, con todas las funciones del visor y del reproductor.
 
 ## Tecnología
 
@@ -260,6 +271,31 @@ Usa una carpeta con varias fotos parecidas (p. ej. ráfagas) y dos vídeos.
 Si algo falla, lo más útil es: modelo de pendrive y formato (FAT32/exFAT), qué pantalla estaba
 abierta y, si es posible, el log (`adb logcat | grep -i usbx`).
 
+## Guía de pruebas de la Fase 5 (gestión de archivos)
+
+Hazla con una carpeta de copias, no con fotos únicas.
+
+| # | Prueba | Cómo hacerla | Resultado esperado |
+|---|---|---|---|
+| 1 | Nueva carpeta | Icono de carpeta con «+» arriba → «Prueba» | Aparece la carpeta; nombres con `/ : * ?` se rechazan |
+| 2 | Seleccionar | Pulsación larga en una foto, toca otras dos | Marca ✓ y barra «3 seleccionados»; Atrás quita la selección |
+| 3 | Copiar | Copiar → elige «Prueba» → «Copiar aquí» | Tarjeta de progreso; las 3 fotos aparecen en «Prueba» |
+| 4 | Cancelar | Copia un vídeo grande y pulsa Cancelar | No queda ningún archivo a medias en el destino |
+| 5 | Renombrar | Selecciona una → ⋮ → Renombrar | Viene seleccionado el nombre sin la extensión |
+| 6 | Mover | Mueve una foto a otra carpeta | Desaparece del origen al instante y está en el destino |
+| 7 | Entre memorias | Con pendrive y tarjeta autorizados, mueve un archivo de una a otra | Se copia y solo después se borra el original |
+| 8 | Eliminar | Elimina la carpeta «Prueba» | Pide confirmación (sin papelera) y la borra con su contenido |
+| 9 | Compartir varios | Selecciona 3 fotos → compartir | La app destino recibe las 3 |
+
+## Guía de pruebas de la Fase 6
+
+| # | Prueba | Cómo hacerla | Resultado esperado |
+|---|---|---|---|
+| 1 | Ajustes | Pantalla principal → ⋮ → Ajustes | Tema, colores, visor, explorador, caché y versión |
+| 2 | Tema | Elige Claro / Oscuro / Sistema y Material You | Cambia al instante en toda la app (el visor sigue siendo negro) |
+| 3 | Caché | «Borrar caché de miniaturas» | El tamaño baja a 0; las miniaturas se regeneran al volver |
+| 4 | Eliminar desde el visor | En una foto: ⋮ → Eliminar → confirmar | Se borra y el visor pasa a la siguiente |
+
 ## Limitaciones conocidas
 
 - **NTFS**: Android solo monta FAT32 y exFAT en la mayoría de móviles (incluido el M52). Un
@@ -286,6 +322,10 @@ abierta y, si es posible, el log (`adb logcat | grep -i usbx`).
   empieza a decodificar hasta que llegas a él (en local suele tardar menos de medio segundo). La
   precarga real de vídeo (`PreloadManager` de Media3) se valorará en la Fase 6.
 - **Reproducción en segundo plano / pantalla apagada** no está incluida: al salir de la app se pausa.
+- **Operaciones de archivos** siguen al cambiar de pantalla, pero si cierras USBX del todo a mitad de una
+  copia, Android puede cortarla: lo ya copiado se conserva, pero el archivo que se estaba copiando puede quedar incompleto en el destino (bórralo y vuelve a copiarlo).
+  Si una carpeta falla a medias al copiarla, lo copiado se queda en el destino; el original nunca se toca.
+- **Sin papelera**: eliminar en una memoria USB o tarjeta SD es definitivo.
 - **Zoom en el multiview** no usa teselas (no es compatible con compartir el zoom entre dos fotos): cada
   panel carga la foto al doble de su tamaño, suficiente hasta ~3×. Para zoom máximo, usa el visor normal.
 - **Zoom sincronizado** aplica la misma ampliación y desplazamiento a los dos paneles: coincide al
