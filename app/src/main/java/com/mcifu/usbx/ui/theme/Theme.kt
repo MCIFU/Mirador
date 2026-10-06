@@ -1,6 +1,10 @@
 package com.mcifu.usbx.ui.theme
 
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -28,10 +32,18 @@ private val UsbxTypography = Typography().run {
 @Composable
 fun UsbxTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    val context = LocalContext.current
+    val scheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        darkTheme -> UsbxDarkColors
+        else -> UsbxLightColors
+    }
     MaterialTheme(
-        colorScheme = if (darkTheme) UsbxDarkColors else UsbxLightColors,
+        colorScheme = scheme,
         shapes = UsbxShapes,
         typography = UsbxTypography,
         content = content,

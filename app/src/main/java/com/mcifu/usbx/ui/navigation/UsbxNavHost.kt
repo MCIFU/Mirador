@@ -14,7 +14,12 @@ import com.mcifu.usbx.domain.model.UsbStorage
 import com.mcifu.usbx.ui.browser.BrowserScreen
 import com.mcifu.usbx.ui.common.LocalNavAnimatedScope
 import com.mcifu.usbx.ui.common.LocalSharedTransitionScope
+import com.mcifu.usbx.ui.common.DiagnosticsDialog
 import com.mcifu.usbx.ui.home.HomeScreen
+import com.mcifu.usbx.ui.settings.SettingsScreen
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.mcifu.usbx.ui.multiview.MultiviewScreen
 import com.mcifu.usbx.ui.viewer.ViewerScreen
 
@@ -40,7 +45,10 @@ fun UsbxNavHost(
             NavHost(navController = navController, startDestination = startRoute) {
                 composable<HomeRoute> {
                     CompositionLocalProvider(LocalNavAnimatedScope provides this) {
-                        HomeScreen(onOpenStorage = { storage -> navController.navigate(storage.rootRoute()) })
+                        HomeScreen(
+                            onOpenStorage = { storage -> navController.navigate(storage.rootRoute()) },
+                            onOpenSettings = { navController.navigate(SettingsRoute) },
+                        )
                     }
                 }
                 composable<BrowserRoute> { entry ->
@@ -76,6 +84,11 @@ fun UsbxNavHost(
                             onOpenMultiview = { route -> navController.navigate(route) },
                         )
                     }
+                }
+                composable<SettingsRoute> {
+                    var diagnostics by remember { mutableStateOf(false) }
+                    SettingsScreen(onBack = { navController.popBackStack() }, onDiagnostics = { diagnostics = true })
+                    if (diagnostics) DiagnosticsDialog(storages = emptyList(), onDismiss = { diagnostics = false })
                 }
                 composable<MultiviewRoute> {
                     CompositionLocalProvider(LocalNavAnimatedScope provides this) {

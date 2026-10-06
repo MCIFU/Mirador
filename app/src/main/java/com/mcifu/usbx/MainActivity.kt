@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
@@ -15,7 +16,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.mcifu.usbx.domain.model.ThemeMode
 import com.mcifu.usbx.data.diagnostics.Diagnostics
 import com.mcifu.usbx.ui.navigation.HomeRoute
 import com.mcifu.usbx.ui.navigation.UsbxNavHost
@@ -53,8 +56,15 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        val settings = (application as UsbxApplication).container.settingsRepository
         setContent {
-            UsbxTheme {
+            val appearance by settings.appearance.collectAsStateWithLifecycle()
+            val dark = when (appearance.themeMode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            UsbxTheme(darkTheme = dark, dynamicColor = appearance.dynamicColor) {
                 Surface(Modifier.fillMaxSize()) {
                     when {
                         resolvingExternal -> Box(Modifier.fillMaxSize().background(Color.Black))

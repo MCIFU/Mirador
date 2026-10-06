@@ -8,7 +8,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.mcifu.usbx.domain.model.AppearanceSettings
 import com.mcifu.usbx.domain.model.BrowserSettings
+import com.mcifu.usbx.domain.model.ThemeMode
 import com.mcifu.usbx.domain.model.SortOrder
 import com.mcifu.usbx.domain.model.ViewerSettings
 import com.mcifu.usbx.domain.repository.SettingsRepository
@@ -58,6 +60,23 @@ class DataStoreSettingsRepository(
         }
     }
 
+    override val appearance: StateFlow<AppearanceSettings> = store.data
+        .map { prefs ->
+            AppearanceSettings(
+                themeMode = enumOrDefault(prefs[THEME_MODE], ThemeMode.SYSTEM),
+                dynamicColor = prefs[DYNAMIC_COLOR] ?: false,
+            )
+        }
+        .stateIn(appScope, SharingStarted.Eagerly, AppearanceSettings())
+
+    override suspend fun updateAppearance(transform: (AppearanceSettings) -> AppearanceSettings) {
+        store.edit { prefs ->
+            val updated = transform(appearance.value)
+            prefs[THEME_MODE] = updated.themeMode.name
+            prefs[DYNAMIC_COLOR] = updated.dynamicColor
+        }
+    }
+
     private fun Preferences.toViewerSettings(): ViewerSettings {
         val defaults = ViewerSettings()
         return ViewerSettings(
@@ -98,5 +117,7 @@ class DataStoreSettingsRepository(
         val VIEWER_ORIENTATION = stringPreferencesKey("viewer_orientation")
         val VIEWER_FILMSTRIP = booleanPreferencesKey("viewer_filmstrip")
         val PLAYER_LOOP = stringPreferencesKey("player_loop_mode")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+        val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
     }
 }

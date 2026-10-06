@@ -6,6 +6,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object HomeRoute
 
+@Serializable
+data object SettingsRoute
+
 /**
  * Una carpeta del explorador. Cada carpeta es una entrada de la pila de navegación, así el
  * botón Atrás sube de nivel y cada carpeta conserva su posición de scroll.

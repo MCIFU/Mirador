@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SdCard
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material.icons.outlined.UsbOff
 import androidx.compose.material3.Button
@@ -84,6 +85,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onOpenStorage: (UsbStorage) -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory),
 ) {
     val storages by viewModel.storages.collectAsStateWithLifecycle()
@@ -151,6 +153,11 @@ fun HomeScreen(
                             Icon(Icons.Outlined.MoreVert, contentDescription = "Más opciones")
                         }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Ajustes") },
+                                leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
+                                onClick = { menuOpen = false; onOpenSettings() },
+                            )
                             DropdownMenuItem(
                                 text = { Text("Informe de diagnóstico") },
                                 leadingIcon = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
