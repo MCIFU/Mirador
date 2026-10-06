@@ -11,6 +11,7 @@ import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import com.mcifu.usbx.data.external.ExternalOpenResolver
 import com.mcifu.usbx.data.image.FullImageFetcher
+import com.mcifu.usbx.data.operations.SafFileOperations
 import com.mcifu.usbx.data.image.FullImageKeyer
 import com.mcifu.usbx.data.settings.DataStoreSettingsRepository
 import com.mcifu.usbx.data.storage.AndroidFileDetailsRepository
@@ -20,6 +21,7 @@ import com.mcifu.usbx.data.thumbnail.ThumbnailFetcher
 import com.mcifu.usbx.data.thumbnail.ThumbnailGenerator
 import com.mcifu.usbx.data.thumbnail.ThumbnailKeyer
 import com.mcifu.usbx.domain.repository.FileDetailsRepository
+import com.mcifu.usbx.domain.repository.FileOperations
 import com.mcifu.usbx.domain.repository.FileRepository
 import com.mcifu.usbx.domain.repository.SettingsRepository
 import com.mcifu.usbx.domain.repository.StorageRepository
@@ -45,6 +47,10 @@ class AppContainer(context: Context) {
     val fileRepository: FileRepository = SafFileRepository(appContext)
 
     val fileDetailsRepository: FileDetailsRepository = AndroidFileDetailsRepository(appContext)
+
+    val fileOperations: FileOperations by lazy {
+        SafFileOperations(appContext, appScope, fileRepository, storageRepository)
+    }
 
     val externalOpenResolver by lazy { ExternalOpenResolver(appContext, storageRepository, fileRepository) }
 
