@@ -12,8 +12,8 @@ android {
         applicationId = "com.mcifu.usbx"
         minSdk = 26
         targetSdk = 37
-        versionCode = 7
-        versionName = "0.8.0"
+        versionCode = 8
+        versionName = "0.8.1"
     }
 
     signingConfigs {
