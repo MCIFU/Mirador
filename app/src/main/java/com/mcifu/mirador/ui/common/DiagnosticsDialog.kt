@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mcifu.mirador.data.diagnostics.Diagnostics
+import com.mcifu.mirador.domain.model.StorageKind
 import com.mcifu.mirador.domain.model.UsbStorage
 
 /** Informe de diagnóstico: copiar o compartir para enviarlo al desarrollador. */
@@ -88,7 +89,9 @@ fun CrashNoticeDialog(onShowReport: () -> Unit, onDismiss: () -> Unit) {
 private fun storageSummary(storages: List<UsbStorage>): String =
     if (storages.isEmpty()) "Ninguno detectado"
     else storages.joinToString("\n") { s ->
-        "${s.label} | ${s.kind} | ${s.mountState} | acceso: ${if (s.isAuthorized) s.access?.treeUri?.authority else "no"}"
+        // Las carpetas guardadas son privadas: el informe no incluye su nombre.
+        val name = if (s.kind == StorageKind.FOLDER) "(carpeta guardada)" else s.label
+        "$name | ${s.kind} | ${s.mountState} | acceso: ${if (s.isAuthorized) s.access?.treeUri?.authority else "no"}"
     }
 
 private fun copyToClipboard(context: Context, text: String) {

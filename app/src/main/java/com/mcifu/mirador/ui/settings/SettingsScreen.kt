@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.SingletonImageLoader
+import com.mcifu.mirador.ui.common.rememberDeviceAuthenticator
 import com.mcifu.mirador.domain.LoopMode
 import com.mcifu.mirador.domain.model.ThemeMode
 import com.mcifu.mirador.domain.model.ViewerScope
@@ -53,6 +54,10 @@ fun SettingsScreen(
     val viewer by viewModel.viewer.collectAsStateWithLifecycle()
     val browser by viewModel.browser.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val confirmUnlock = rememberDeviceAuthenticator(
+        title = "Quitar la protección",
+        subtitle = "Las carpetas guardadas se verán sin pedir el bloqueo",
+    ) { ok -> if (ok) viewModel.updateAppearance { it.copy(lockSavedFolders = false) } }
     val loader = remember { SingletonImageLoader.get(context) }
     var cacheBytes by remember { mutableLongStateOf(loader.diskCache?.size ?: 0L) }
     val version = remember {
@@ -82,6 +87,12 @@ fun SettingsScreen(
                 SwitchRow("Colores del fondo de pantalla (Material You)", appearance.dynamicColor) { v ->
                     viewModel.updateAppearance { it.copy(dynamicColor = v) }
                 }
+            }
+
+            Section("Privacidad")
+            SwitchRow("Pedir huella o PIN para ver las carpetas guardadas", appearance.lockSavedFolders) { v ->
+                // Desactivar la protección también exige confirmar el bloqueo del móvil.
+                if (v) viewModel.updateAppearance { it.copy(lockSavedFolders = true) } else confirmUnlock()
             }
 
             Section("Visor y reproductor")

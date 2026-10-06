@@ -8,6 +8,7 @@ Explorador y visor de fotos y vídeos para memorias USB y tarjetas SD en Android
 - Vista múltiple: dos fotos o dos vídeos lado a lado, con zoom y reproducción sincronizados.
 - Copiar, mover, renombrar y eliminar archivos.
 - Abre fotos y vídeos desde otras apps («Abrir con Mirador»).
+- Las carpetas que guardas no aparecen en la pantalla inicial y se protegen con huella o PIN.
 
 Requiere Android 8.0 o superior.
 

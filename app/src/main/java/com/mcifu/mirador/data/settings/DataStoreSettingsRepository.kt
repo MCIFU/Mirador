@@ -65,6 +65,7 @@ class DataStoreSettingsRepository(
             AppearanceSettings(
                 themeMode = enumOrDefault(prefs[THEME_MODE], ThemeMode.SYSTEM),
                 dynamicColor = prefs[DYNAMIC_COLOR] ?: false,
+                lockSavedFolders = prefs[LOCK_SAVED_FOLDERS] ?: true,
             )
         }
         .stateIn(appScope, SharingStarted.Eagerly, AppearanceSettings())
@@ -74,6 +75,7 @@ class DataStoreSettingsRepository(
             val updated = transform(appearance.value)
             prefs[THEME_MODE] = updated.themeMode.name
             prefs[DYNAMIC_COLOR] = updated.dynamicColor
+            prefs[LOCK_SAVED_FOLDERS] = updated.lockSavedFolders
         }
     }
 
@@ -119,5 +121,6 @@ class DataStoreSettingsRepository(
         val PLAYER_LOOP = stringPreferencesKey("player_loop_mode")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
+        val LOCK_SAVED_FOLDERS = booleanPreferencesKey("lock_saved_folders")
     }
 }
