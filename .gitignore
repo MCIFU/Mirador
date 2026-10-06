@@ -12,3 +12,6 @@
 *.apk
 *.aab
 !app/debug.keystore
+
+# APK y archivos para enviar al móvil
+/apk/
