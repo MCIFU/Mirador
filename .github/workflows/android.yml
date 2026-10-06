@@ -9,6 +9,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Tests, lint y APK
@@ -59,3 +62,33 @@ jobs:
             app/build/reports/
             app/build/test-results/
           if-no-files-found: ignore
+
+  # Publica el APK en Releases como «Mirador» (Mirador.apk) en cada push a la rama principal.
+  # Siempre es la misma release: el enlace de descarga del README no cambia nunca.
+  release:
+    name: Publicar en Releases
+    needs: build
+    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mirador-release-apk
+          path: apk
+
+      - name: Publicar Mirador.apk
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mv apk/*.apk Mirador.apk
+          git tag -f mirador "$GITHUB_SHA"
+          git push -f origin refs/tags/mirador
+          if ! gh release view mirador > /dev/null 2>&1; then
+            gh release create mirador --title "Mirador" --latest \
+              --notes "Descarga **Mirador.apk**, ábrelo en el móvil y acepta instalar apps desconocidas."
+          fi
+          gh release upload mirador Mirador.apk --clobber
