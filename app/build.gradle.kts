@@ -5,15 +5,15 @@ plugins {
 }
 
 android {
-    namespace = "com.mcifu.usbx"
+    namespace = "com.mcifu.mirador"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.mcifu.usbx"
+        applicationId = "com.mcifu.mirador"
         minSdk = 26
         targetSdk = 37
-        versionCode = 8
-        versionName = "0.8.1"
+        versionCode = 9
+        versionName = "0.9.0"
     }
 
     signingConfigs {

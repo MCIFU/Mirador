@@ -1,10 +1,11 @@
-# USBX
+# Mirador
 
 Explorador y visor multimedia para memorias USB conectadas por USB‑C / OTG en Android.
 Dispositivo de referencia: **Samsung Galaxy M52 5G** (Android 14 / One UI 6), pero solo usa APIs
 públicas de Android: no hay código específico de Samsung.
 
-> **Estado: Fase 6 (pulido) — versión 0.7.0.** Lo que no está en la tabla de abajo como «Hecho» no está
+> **Estado: Fase 6 (pulido) — versión 0.9.0.** Antes se llamaba USBX; desde la 0.9.0 es Mirador
+> (id nuevo: la versión USBX hay que desinstalarla aparte). Lo que no está en la tabla de abajo como «Hecho» no está
 > implementado, y la app no lo aparenta.
 
 | Área | Estado |
@@ -16,9 +17,10 @@ públicas de Android: no hay código específico de Samsung.
 | Zoom nítido, doble toque, rotación, orientación, transiciones, tira de miniaturas, GIF | Hecho (Fase 2) |
 | Reproductor de vídeo y audio integrado: barra de progreso, velocidad, repetición, bloqueo, gestos | Hecho (Fase 3) |
 | Multiview: 2 fotos o 2 vídeos, zoom y reproducción sincronizables, intercambiar paneles | Hecho (Fase 4) |
-| Abrir fotos, vídeos y audio desde otras apps («Abrir con USBX») | Hecho (0.5.0) |
+| Abrir fotos, vídeos y audio desde otras apps («Abrir con Mirador») | Hecho (0.5.0) |
 | Selección múltiple, copiar, mover, eliminar, renombrar, nueva carpeta, progreso | Hecho (Fase 5) |
 | Ajustes (tema, Material You, visor, caché), eliminar desde el visor, informe de diagnóstico | Hecho (Fase 6) |
+| Fluidez: precarga de miniaturas, zoom sin recomposición, vídeo sin saltos al abrir/cerrar, perfil de referencia | Hecho (0.9.0) |
 
 ## Instalar en el móvil
 
@@ -26,11 +28,14 @@ públicas de Android: no hay código específico de Samsung.
 
 1. En GitHub, abre la pestaña **Actions** → workflow **Android CI** → la ejecución más reciente
    con ✔ de la rama que quieras probar.
-2. Abajo, en **Artifacts**, descarga `usbx-debug-apk` (es un .zip que contiene el .apk).
+2. Abajo, en **Artifacts**, descarga `mirador-release-apk` (es un .zip que contiene el .apk).
+   Es la versión recomendada para el uso diario: va optimizada con R8 y el perfil de referencia,
+   y se desplaza y amplía más fluida que la de depuración (`mirador-debug-apk`).
 3. Pasa el `.apk` al móvil y ábrelo con «Mis archivos». La primera vez Android pedirá permitir
    «Instalar apps desconocidas» para esa app.
 
-El APK de depuración se instala como **USBX** con id `com.mcifu.usbx.debug`, y se puede
+El APK release se instala como **Mirador** con id `com.mcifu.mirador` (el de depuración, con
+`com.mcifu.mirador.debug`, como app aparte). Ambos se pueden
 actualizar encima de una versión anterior sin desinstalar (el repositorio incluye una clave de
 depuración fija; no sirve para publicar en Google Play).
 
@@ -45,14 +50,14 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ./gradlew testDebugUnitTest lintDebug    # tests unitarios y Android Lint
 ```
 
-## Abrir con USBX desde otras apps
+## Abrir con Mirador desde otras apps
 
-USBX se registra para abrir fotos, vídeos y audio. En **Mis archivos** (o la galería, WhatsApp…)
-toca un archivo, elige **USBX** y pulsa **Siempre**. Si la Galería o el reproductor de Samsung se
+Mirador se registra para abrir fotos, vídeos y audio. En **Mis archivos** (o la galería, WhatsApp…)
+toca un archivo, elige **Mirador** y pulsa **Siempre**. Si la Galería o el reproductor de Samsung se
 abren directamente, quítales el «abrir por defecto» en Ajustes → Aplicaciones → (app) →
 Establecer como predeterminada → Borrar valores predeterminados.
 
-- Si USBX tiene acceso a esa memoria, el archivo se abre con su carpeta y puedes deslizar.
+- Si Mirador tiene acceso a esa memoria, el archivo se abre con su carpeta y puedes deslizar.
 - Si no, se abre solo ese archivo, con todas las funciones del visor y del reproductor.
 
 ## Tecnología
@@ -78,7 +83,7 @@ Sin Hilt/Dagger (el grafo de dependencias cabe en `AppContainer`), sin Firebase,
 analítica y sin acceso a red. La app no declara permisos de almacenamiento, de red ni ningún otro
 que el usuario tenga que conceder.
 
-## Cómo accede USBX a la memoria USB
+## Cómo accede Mirador a la memoria USB
 
 Se evaluaron tres opciones:
 
@@ -88,7 +93,7 @@ Se evaluaron tres opciones:
 2. **Acceso USB directo (`UsbManager` + libaums).** Descartada: salta el montaje del sistema,
    solo entiende FAT32, es más lento, entra en conflicto con Android si este ya montó la
    memoria y no es una API oficial de almacenamiento.
-3. **Storage Access Framework (elegida).** Android monta el pendrive (FAT32/exFAT) y USBX pide
+3. **Storage Access Framework (elegida).** Android monta el pendrive (FAT32/exFAT) y Mirador pide
    permiso sobre la raíz con `StorageVolume.createOpenDocumentTreeIntent()`: el selector del
    sistema se abre directamente en la memoria y basta con pulsar «Usar esta carpeta». El
    permiso se guarda (`takePersistableUriPermission`) y se reconoce cuando vuelves a conectar
@@ -133,7 +138,7 @@ UI (Compose)  →  ViewModel (StateFlow)  →  Dominio (modelos y reglas puras) 
 ```
 
 ```
-app/src/main/java/com/mcifu/usbx/
+app/src/main/java/com/mcifu/mirador/
 ├── di/AppContainer.kt            Inyección de dependencias manual e ImageLoader de Coil
 ├── domain/
 │   ├── model/                    UsbStorage, FileItem, FileType, FileTypeRules, BrowserSettings,
@@ -175,9 +180,9 @@ alguna carpeta con muchas fotos (idealmente cientos), algún vídeo, un MP3 y un
 | # | Prueba | Cómo hacerla | Resultado esperado |
 |---|---|---|---|
 | 1 | Compilar | Opción A o B de arriba | APK generado sin errores |
-| 2 | Instalar | Abrir el APK en el móvil | Aparece el icono USBX (pendrive turquesa) |
-| 3 | Conectar USB | Con USBX abierto, enchufa el pendrive | En 1–3 s aparece su tarjeta: «Conectada · falta conceder acceso», con espacio libre |
-| 4 | Abrir USBX | Si lo conectaste antes de abrir la app, abre USBX | La memoria aparece igual |
+| 2 | Instalar | Abrir el APK en el móvil | Aparece el icono Mirador (pendrive turquesa) |
+| 3 | Conectar USB | Con Mirador abierto, enchufa el pendrive | En 1–3 s aparece su tarjeta: «Conectada · falta conceder acceso», con espacio libre |
+| 4 | Abrir Mirador | Si lo conectaste antes de abrir la app, abre Mirador | La memoria aparece igual |
 | 5 | Conceder permiso | «Conceder acceso» → en el selector pulsa «Usar esta carpeta» → «Permitir» | Se abre el explorador en la raíz del pendrive |
 | 5b | Permiso rechazado | Repite pulsando Atrás en el selector | Aviso «Permiso rechazado…» con «Reintentar»; la app sigue funcionando |
 | 6 | Navegar | Entra en carpetas; usa Atrás del sistema y la ruta superior (toca un nivel intermedio) | Cada nivel conserva su posición de scroll; la ruta salta al nivel pulsado |
@@ -269,7 +274,7 @@ Usa una carpeta con varias fotos parecidas (p. ej. ráfagas) y dos vídeos.
 | 13 | Desconectar | Desenchufa el USB con dos vídeos reproduciéndose; reconecta | Aviso sin cierres; al reconectar vuelven ambos vídeos |
 
 Si algo falla, lo más útil es: modelo de pendrive y formato (FAT32/exFAT), qué pantalla estaba
-abierta y, si es posible, el log (`adb logcat | grep -i usbx`).
+abierta y, si es posible, el log (`adb logcat | grep -i mirador`).
 
 ## Guía de pruebas de la Fase 5 (gestión de archivos)
 
@@ -302,17 +307,17 @@ Hazla con una carpeta de copias, no con fotos únicas.
   pendrive NTFS no aparecerá; Android mostrará su propio aviso de formato no compatible.
 - **Desenchufar sin expulsar**: para leer no hay riesgo de corromper datos. Aun así, si
   desenchufas justo mientras Android lee un archivo, el sistema puede cerrar los procesos que
-  lo tienen abierto; USBX abre cada archivo el mínimo tiempo posible. Conviene comprobarlo
+  lo tienen abierto; Mirador abre cada archivo el mínimo tiempo posible. Conviene comprobarlo
   en la prueba 18.
 - **GIF animados** se animan en el visor; en la cuadrícula se ve el primer fotograma.
 - **Zoom nítido** requiere que Android sepa decodificar el formato por regiones. JPEG, PNG y WebP
-  siempre; para el resto (HEIC, BMP…) USBX lo comprueba al abrir cada archivo y, si no se puede,
+  siempre; para el resto (HEIC, BMP…) Mirador lo comprueba al abrir cada archivo y, si no se puede,
   hace zoom sobre la imagen a resolución de pantalla (menos detalle al ampliar, pero sin bloqueos).
 - **Girar** es solo visual y no se guarda: modificar archivos llegará con la Fase 5.
 - **HEIC/HEIF** necesita Android 9+ y **AVIF** Android 12+ (el M52 cumple ambos).
 - **Códecs de vídeo**: ExoPlayer lee MP4, MKV, WebM, MOV, AVI, TS y 3GP, pero la decodificación la
   hace el móvil. El M52 decodifica H.264, H.265/HEVC y VP9 por hardware; **AV1** y audio
-  **DTS/AC‑3** pueden no reproducirse (USBX lo avisa y ofrece otra app). Añadir decodificadores
+  **DTS/AC‑3** pueden no reproducirse (Mirador lo avisa y ofrece otra app). Añadir decodificadores
   software (FFmpeg) es posible pero aumenta el APK en unos 10 MB; se valorará en la Fase 6.
 - **Avance rápido 4×–16× y retroceso** funcionan por saltos entre fotogramas clave: la imagen avanza
   a trompicones (como en la mayoría de reproductores), sin sonido. El 2× hacia delante es fluido.
@@ -322,7 +327,7 @@ Hazla con una carpeta de copias, no con fotos únicas.
   empieza a decodificar hasta que llegas a él (en local suele tardar menos de medio segundo). La
   precarga real de vídeo (`PreloadManager` de Media3) se valorará en la Fase 6.
 - **Reproducción en segundo plano / pantalla apagada** no está incluida: al salir de la app se pausa.
-- **Operaciones de archivos** siguen al cambiar de pantalla, pero si cierras USBX del todo a mitad de una
+- **Operaciones de archivos** siguen al cambiar de pantalla, pero si cierras Mirador del todo a mitad de una
   copia, Android puede cortarla: lo ya copiado se conserva, pero el archivo que se estaba copiando puede quedar incompleto en el destino (bórralo y vuelve a copiarlo).
   Si una carpeta falla a medias al copiarla, lo copiado se queda en el destino; el original nunca se toca.
 - **Sin papelera**: eliminar en una memoria USB o tarjeta SD es definitivo.

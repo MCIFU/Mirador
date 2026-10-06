@@ -39,14 +39,14 @@ jobs:
       - name: Subir APK de depuración
         uses: actions/upload-artifact@v4
         with:
-          name: usbx-debug-apk
+          name: mirador-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
       - name: Subir APK release
         uses: actions/upload-artifact@v4
         with:
-          name: usbx-release-apk
+          name: mirador-release-apk
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 

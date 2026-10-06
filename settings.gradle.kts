@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "USBX"
+rootProject.name = "Mirador"
 include(":app")

@@ -1,0 +1,16 @@
+# Perfil de referencia: Android compila estas clases a código nativo al instalar el APK
+# (ProfileInstaller), en lugar de interpretarlas las primeras veces. Se nota en el primer
+# desplazamiento por la cuadrícula, el primer zoom y la primera apertura de un vídeo.
+# Compose, Material3 y Navigation traen su propio perfil; aquí van la app y las librerías que no.
+HSPLcom/mcifu/mirador/**->**(**)**
+Lcom/mcifu/mirador/**;
+HSPLcoil3/**->**(**)**
+Lcoil3/**;
+HSPLme/saket/telephoto/**->**(**)**
+Lme/saket/telephoto/**;
+HSPLandroidx/media3/exoplayer/ExoPlayerImpl;->**(**)**
+HSPLandroidx/media3/exoplayer/ExoPlayerImplInternal;->**(**)**
+HSPLandroidx/media3/exoplayer/mediacodec/**->**(**)**
+HSPLandroidx/media3/exoplayer/video/**->**(**)**
+HSPLandroidx/media3/ui/compose/**->**(**)**
+Landroidx/media3/exoplayer/**;

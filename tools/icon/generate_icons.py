@@ -1,4 +1,4 @@
-"""Genera el icono de USBX: vectores Android, PNG por densidad, icono de Play Store (512 px) y splash.
+"""Genera el icono de Mirador: vectores Android, PNG por densidad, icono de Play Store (512 px) y splash.
 
 Diseño: pendrive USB en diagonal con un botón de reproducir, sobre degradado turquesa → petróleo.
 El conjunto (cuerpo + conector) está centrado en el lienzo de 108×108 del icono adaptativo.

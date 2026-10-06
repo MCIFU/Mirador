@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="usbx_background">#FAFDFC</color>
+    <color name="mirador_background">#FAFDFC</color>
     <!-- Splash: círculo turquesa sobre petróleo profundo, igual en claro y oscuro (identidad de marca). -->
-    <color name="usbx_splash_background">#003E47</color>
-    <color name="usbx_splash_icon_background">#00A08F</color>
+    <color name="mirador_splash_background">#003E47</color>
+    <color name="mirador_splash_icon_background">#00A08F</color>
 </resources>

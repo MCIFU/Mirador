@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- USBX no guarda nada que merezca copia en la nube: los permisos de la memoria USB no se
+<!-- Mirador no guarda nada que merezca copia en la nube: los permisos de la memoria USB no se
      pueden restaurar en otro dispositivo y las miniaturas son caché. -->
 <data-extraction-rules>
     <cloud-backup>
