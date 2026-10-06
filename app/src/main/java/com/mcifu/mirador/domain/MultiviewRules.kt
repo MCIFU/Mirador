@@ -32,8 +32,10 @@ object MultiviewRules {
         focusY: Float,
         width: Float,
         height: Float,
+        /** Por debajo de 1 permite "estirar" al reducir; quien llama vuelve luego a 1 con animación. */
+        minScale: Float = MIN_SCALE,
     ): ZoomTransform {
-        val newScale = (current.scale * zoom).coerceIn(MIN_SCALE, MAX_SCALE)
+        val newScale = (current.scale * zoom).coerceIn(minScale, MAX_SCALE)
         val factor = newScale / current.scale
         val x = focusX - (focusX - current.offsetX) * factor + panX
         val y = focusY - (focusY - current.offsetY) * factor + panY
@@ -47,8 +49,9 @@ object MultiviewRules {
 
     /** Impide que la imagen se aleje de los bordes del panel. */
     fun clamp(t: ZoomTransform, width: Float, height: Float): ZoomTransform {
-        val maxX = (t.scale - 1f) * width / 2f
-        val maxY = (t.scale - 1f) * height / 2f
+        // Con escala < 1 (estirón al reducir) el contenido queda centrado.
+        val maxX = ((t.scale - 1f) * width / 2f).coerceAtLeast(0f)
+        val maxY = ((t.scale - 1f) * height / 2f).coerceAtLeast(0f)
         return t.copy(offsetX = t.offsetX.coerceIn(-maxX, maxX), offsetY = t.offsetY.coerceIn(-maxY, maxY))
     }
 

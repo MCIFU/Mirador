@@ -87,6 +87,8 @@ fun ViewerScreen(
     var controlsVisible by rememberSaveable { mutableStateOf(true) }
     var locked by rememberSaveable { mutableStateOf(false) }
     var infoFor by remember { mutableStateOf<FileItem?>(null) }
+    /** Vídeo ampliado: deslizar mueve la imagen en lugar de pasar al siguiente. */
+    var videoZoomed by remember { mutableStateOf(false) }
     var cannotOpen by remember { mutableStateOf<Pair<FileItem, Boolean>?>(null) }
     var showScopeDialog by remember { mutableStateOf(false) }
     var showSpeedSheet by remember { mutableStateOf(false) }
@@ -169,6 +171,7 @@ fun ViewerScreen(
                         if (!locked) leave(current?.documentId)
                     }
                     LaunchedEffect(current) { current?.let(viewModel::onPageShown) }
+                    LaunchedEffect(settled?.documentId) { videoZoomed = false }
                     LaunchedEffect(settled?.documentId) {
                         // Al abrir, el reproductor arranca cuando termina la animación de entrada:
                         // crear ExoPlayer y el decodificador durante la animación le quita fotogramas.
@@ -214,7 +217,7 @@ fun ViewerScreen(
                         key = { items[it].documentId },
                         pageSpacing = 16.dp,
                         // Bloqueado o con avance rápido activo, el deslizamiento no cambia de elemento.
-                        userScrollEnabled = !locked && playerState.fastSeek == null,
+                        userScrollEnabled = !locked && playerState.fastSeek == null && !videoZoomed,
                         modifier = Modifier.fillMaxSize(),
                     ) { page ->
                         val item = items[page]
@@ -253,6 +256,7 @@ fun ViewerScreen(
                                 onRetry = controller::retry,
                                 onOpenWith = { ExternalActions.openWith(context, item) },
                                 modifier = pageModifier,
+                                onZoomChanged = { zoomed -> if (page == pagerState.settledPage) videoZoomed = zoomed },
                             )
                             else -> FilePage(
                                 item = item,

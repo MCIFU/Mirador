@@ -59,4 +59,20 @@ class MultiviewRulesTest {
         // B más corto y ya terminado: no se fuerza.
         assertFalse(MultiviewRules.needsResync(40_000, 30_000, 0, 30_000))
     }
+
+    @Test
+    fun `al reducir por debajo de 1 se permite el estiron y queda centrado`() {
+        val zoomed = ZoomTransform(scale = 2f, offsetX = 100f, offsetY = -50f)
+        val t = MultiviewRules.applyGesture(zoomed, 0.4f, 0f, 0f, 0f, 0f, 1000f, 2000f, minScale = 0.8f)
+        assertEquals(0.8f, t.scale, 0.0001f)
+        assertEquals(0f, t.offsetX, 0.0001f)
+        assertEquals(0f, t.offsetY, 0.0001f)
+        assertFalse(t.isZoomed)
+    }
+
+    @Test
+    fun `sin minScale explicito la escala no baja de 1`() {
+        val t = MultiviewRules.applyGesture(ZoomTransform(), 0.5f, 0f, 0f, 0f, 0f, 1000f, 2000f)
+        assertEquals(1f, t.scale, 0.0001f)
+    }
 }

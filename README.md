@@ -4,7 +4,7 @@ Explorador y visor multimedia para memorias USB conectadas por USB‑C / OTG en 
 Dispositivo de referencia: **Samsung Galaxy M52 5G** (Android 14 / One UI 6), pero solo usa APIs
 públicas de Android: no hay código específico de Samsung.
 
-> **Estado: Fase 6 (pulido) — versión 0.9.0.** Antes se llamaba USBX; desde la 0.9.0 es Mirador
+> **Estado: Fase 6 (pulido) — versión 0.9.1.** Antes se llamaba USBX; desde la 0.9.0 es Mirador
 > (id nuevo: la versión USBX hay que desinstalarla aparte). Lo que no está en la tabla de abajo como «Hecho» no está
 > implementado, y la app no lo aparenta.
 
@@ -21,6 +21,7 @@ públicas de Android: no hay código específico de Samsung.
 | Selección múltiple, copiar, mover, eliminar, renombrar, nueva carpeta, progreso | Hecho (Fase 5) |
 | Ajustes (tema, Material You, visor, caché), eliminar desde el visor, informe de diagnóstico | Hecho (Fase 6) |
 | Fluidez: precarga de miniaturas, zoom sin recomposición, vídeo sin saltos al abrir/cerrar, perfil de referencia | Hecho (0.9.0) |
+| Zoom en vídeos: pellizcar (hasta 6×), arrastrar ampliado, vuelta a 1× animada (botón o Atrás) | Hecho (0.9.1) |
 
 ## Instalar en el móvil
 
