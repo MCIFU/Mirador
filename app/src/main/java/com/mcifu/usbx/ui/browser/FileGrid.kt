@@ -2,6 +2,7 @@ package com.mcifu.usbx.ui.browser
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,6 +47,7 @@ fun FileGrid(
     onClick: (FileItem) -> Unit,
     onLongClick: (FileItem) -> Unit,
     modifier: Modifier = Modifier,
+    selectedIds: Set<String> = emptySet(),
 ) {
     val window = LocalWindowInfo.current.containerSize
     val screenAspect = if (window.height > 0) window.width.toFloat() / window.height else 0.5f
@@ -70,6 +72,7 @@ fun FileGrid(
             items(items, key = { it.documentId }, contentType = { it.type }) { item ->
                 GridTile(
                     item = item,
+                    selected = if (selectedIds.isEmpty()) null else item.documentId in selectedIds,
                     iconSize = iconSize,
                     onClick = { onClick(item) },
                     onLongClick = { onLongClick(item) },
@@ -103,6 +106,8 @@ fun FileGrid(
 @Composable
 private fun GridTile(
     item: FileItem,
+    /** `null` = fuera del modo selección. */
+    selected: Boolean?,
     iconSize: androidx.compose.ui.unit.Dp,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -112,8 +117,11 @@ private fun GridTile(
         Modifier
             .aspectRatio(1f)
             .clip(shape)
+            .then(if (selected == true) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .semantics { contentDescription = "${item.type.label()}: ${item.name}" },
+            .semantics {
+                contentDescription = "${item.type.label()}: ${item.name}" + if (selected == true) ", seleccionado" else ""
+            },
     ) {
         if (item.type.isVisualMedia) {
             // Fotos y vídeos: solo la imagen, como en una galería. La foto "crece" hacia el visor.
@@ -143,5 +151,6 @@ private fun GridTile(
                 )
             }
         }
+        if (selected != null) SelectionMark(selected, Modifier.align(Alignment.TopEnd))
     }
 }

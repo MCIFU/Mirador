@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.toRoute
+import com.mcifu.usbx.domain.ExternalPaths
 import com.mcifu.usbx.domain.FileSorter
 import com.mcifu.usbx.domain.MediaNavigation
 import com.mcifu.usbx.domain.PlaybackRules
@@ -18,8 +19,12 @@ import com.mcifu.usbx.domain.model.FileDetails
 import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.domain.model.FileType
 import com.mcifu.usbx.domain.model.FolderLocation
+import com.mcifu.usbx.domain.model.MountState
+import com.mcifu.usbx.domain.model.OperationProgress
 import com.mcifu.usbx.domain.model.StorageException
+import com.mcifu.usbx.domain.model.UsbStorage
 import com.mcifu.usbx.domain.repository.FileDetailsRepository
+import com.mcifu.usbx.domain.repository.FileOperations
 import com.mcifu.usbx.domain.repository.FileRepository
 import com.mcifu.usbx.domain.repository.SettingsRepository
 import com.mcifu.usbx.domain.repository.StorageRepository
@@ -36,8 +41,10 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -67,6 +74,7 @@ class BrowserViewModel(
     private val storageRepository: StorageRepository,
     private val settingsRepository: SettingsRepository,
     private val fileDetailsRepository: FileDetailsRepository,
+    private val fileOperations: FileOperations,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<BrowserRoute>()
@@ -109,9 +117,94 @@ class BrowserViewModel(
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
+    /** Selección múltiple (documentIds). Va aparte del estado para no reordenar al seleccionar. */
+    private val _selection = MutableStateFlow<Set<String>>(emptySet())
+    val selection: StateFlow<Set<String>> = _selection.asStateFlow()
+
+    /** Escritura permitida: memoria montada en lectura/escritura (no "solo lectura"). */
+    val canWrite: StateFlow<Boolean> = storageRepository.storages
+        .map { list -> list.firstOrNull { it.id == location.storageId }?.mountState == MountState.MOUNTED }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val operation: StateFlow<OperationProgress?> = fileOperations.progress
+
+    /** Destinos posibles para copiar/mover: memorias autorizadas, conectadas y escribibles. */
+    val writableStorages: StateFlow<List<UsbStorage>> = storageRepository.storages
+        .map { list -> list.filter { it.canBrowse && it.mountState == MountState.MOUNTED } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * Niveles iniciales del selector de destino: la carpeta actual con sus carpetas superiores, para
+     * poder subir. Si el proveedor no usa rutas jerárquicas, solo la carpeta actual.
+     */
+    fun pickerStart(): List<PickerLevel> {
+        val root = storageRepository.storages.value.firstOrNull { it.id == location.storageId }?.access?.rootDocumentId
+        val ids = mutableListOf(location.documentId)
+        while (root != null && ids.first() != root) {
+            ids.add(0, ExternalPaths.parentOf(ids.first()) ?: break)
+        }
+        return if (ids.first() == root && ids.size == route.path.size) {
+            ids.zip(route.path) { id, name -> PickerLevel(location.copy(documentId = id), name) }
+        } else {
+            listOf(PickerLevel(location, route.path.last()))
+        }
+    }
+
+    /** Subcarpetas de una ubicación (para el selector de destino). */
+    suspend fun foldersIn(location: FolderLocation): List<FileItem> =
+        FileSorter.sort(fileRepository.listFolder(location), settingsRepository.browserSettings.value.sortOrder, showHidden = false)
+            .filter { it.isDirectory }
+
     init {
         load(forceRefresh = false)
         observeConnection()
+        // Tras copiar, mover, borrar, renombrar o crear: se recarga si afecta a esta memoria.
+        viewModelScope.launch {
+            fileOperations.changes.collect { storages ->
+                if (location.storageId in storages) load(forceRefresh = true)
+            }
+        }
+    }
+
+    // --- Selección ---------------------------------------------------------------------------
+
+    fun toggleSelection(item: FileItem) = _selection.update { if (item.documentId in it) it - item.documentId else it + item.documentId }
+
+    fun selectAll() = _selection.update { state.value.items.map { it.documentId }.toSet() }
+
+    fun clearSelection() = _selection.update { emptySet() }
+
+    fun selectedItems(): List<FileItem> = state.value.items.filter { it.documentId in _selection.value }
+
+    // --- Operaciones -------------------------------------------------------------------------
+
+    /** Devuelve el mensaje de error o `null` si ha ido bien. */
+    suspend fun createFolder(name: String): String? = runOperation { fileOperations.createFolder(location, name.trim()) }
+
+    suspend fun rename(item: FileItem, newName: String): String? = runOperation {
+        fileOperations.rename(item, location, newName.trim())
+        clearSelection()
+    }
+
+    fun delete(items: List<FileItem>): Boolean = fileOperations.delete(items, location).also { if (it) clearSelection() }
+
+    fun copyTo(items: List<FileItem>, target: FolderLocation): Boolean =
+        fileOperations.copy(items, location, target).also { if (it) clearSelection() }
+
+    fun moveTo(items: List<FileItem>, target: FolderLocation): Boolean =
+        fileOperations.move(items, location, target).also { if (it) clearSelection() }
+
+    fun cancelOperation() = fileOperations.cancel()
+
+    fun dismissOperation() = fileOperations.dismiss()
+
+    private suspend fun runOperation(block: suspend () -> Unit): String? = try {
+        block()
+        null
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: StorageException) {
+        e.message ?: "No se pudo completar la operación"
     }
 
     /**
@@ -221,6 +314,7 @@ class BrowserViewModel(
                     storageRepository = appContainer.storageRepository,
                     settingsRepository = appContainer.settingsRepository,
                     fileDetailsRepository = appContainer.fileDetailsRepository,
+                    fileOperations = appContainer.fileOperations,
                 )
             }
         }

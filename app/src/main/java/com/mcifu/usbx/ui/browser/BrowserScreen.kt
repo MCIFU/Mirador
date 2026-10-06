@@ -1,5 +1,6 @@
 package com.mcifu.usbx.ui.browser
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mcifu.usbx.data.diagnostics.Diagnostics
 import com.mcifu.usbx.domain.model.FileItem
+import com.mcifu.usbx.domain.model.OperationKind
 import com.mcifu.usbx.domain.model.ViewMode
 import com.mcifu.usbx.ui.common.CannotOpenDialog
 import com.mcifu.usbx.ui.common.ExternalActions
@@ -74,6 +77,15 @@ fun BrowserScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    val selection by viewModel.selection.collectAsStateWithLifecycle()
+    val canWrite by viewModel.canWrite.collectAsStateWithLifecycle()
+    val operation by viewModel.operation.collectAsStateWithLifecycle()
+    val writableStorages by viewModel.writableStorages.collectAsStateWithLifecycle()
+    val selectionMode = selection.isNotEmpty()
+
+    var naming by remember { mutableStateOf<NamingRequest?>(null) }
+    var deleting by remember { mutableStateOf<List<FileItem>?>(null) }
+    var picking by remember { mutableStateOf<Pair<OperationKind, List<FileItem>>?>(null) }
     var actionsFor by remember { mutableStateOf<FileItem?>(null) }
     var infoFor by remember { mutableStateOf<FileItem?>(null) }
     var cannotOpen by remember { mutableStateOf<Pair<FileItem, Boolean>?>(null) }
@@ -87,6 +99,7 @@ fun BrowserScreen(
 
     fun open(item: FileItem) {
         when {
+            selectionMode -> viewModel.toggleSelection(item)
             item.isDirectory -> onOpenFolder(viewModel.childRoute(item))
             viewModel.canViewInternally(item) -> {
                 Diagnostics.log("ABRIR", "${item.name} (${item.type}, ${item.mimeType}) → visor de USBX")
@@ -116,8 +129,15 @@ fun BrowserScreen(
             FileAction.SHARE -> if (!ExternalActions.share(context, listOf(item))) {
                 scope.launch { snackbar.showSnackbar("No hay aplicaciones con las que compartir.") }
             }
+            FileAction.RENAME -> naming = NamingRequest.Rename(item)
+            FileAction.COPY -> picking = OperationKind.COPY to listOf(item)
+            FileAction.MOVE -> picking = OperationKind.MOVE to listOf(item)
+            FileAction.DELETE -> deleting = listOf(item)
         }
     }
+
+    // Atrás con elementos seleccionados: primero se quita la selección.
+    BackHandler(enabled = selectionMode) { viewModel.clearSelection() }
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { snackbar.showSnackbar(it) }
@@ -138,7 +158,24 @@ fun BrowserScreen(
 
     Scaffold(
         topBar = {
-            Column {
+            if (selectionMode) {
+                SelectionTopBar(
+                    count = selection.size,
+                    canWrite = canWrite,
+                    single = viewModel.selectedItems().singleOrNull(),
+                    onClose = viewModel::clearSelection,
+                    onSelectAll = viewModel::selectAll,
+                    onShare = {
+                        if (!ExternalActions.share(context, viewModel.selectedItems())) {
+                            scope.launch { snackbar.showSnackbar("Selecciona al menos un archivo (las carpetas no se pueden compartir).") }
+                        }
+                    },
+                    onCopy = { picking = OperationKind.COPY to viewModel.selectedItems() },
+                    onMove = { picking = OperationKind.MOVE to viewModel.selectedItems() },
+                    onDelete = { deleting = viewModel.selectedItems() },
+                    onSingleAction = { item, action -> onAction(item, action) },
+                )
+            } else Column {
                 TopAppBar(
                     title = {
                         Column {
@@ -166,6 +203,9 @@ fun BrowserScreen(
                                 if (isGrid) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
                                 contentDescription = if (isGrid) "Ver como lista" else "Ver como cuadrícula",
                             )
+                        }
+                        IconButton(onClick = { naming = NamingRequest.CreateFolder }, enabled = canWrite && state.error == null) {
+                            Icon(Icons.Outlined.CreateNewFolder, contentDescription = "Nueva carpeta")
                         }
                         IconButton(onClick = { showSettings = true }) {
                             Icon(Icons.Outlined.Tune, contentDescription = "Visualización y orden")
@@ -197,7 +237,8 @@ fun BrowserScreen(
                     state = gridState,
                     contentPadding = contentPadding,
                     onClick = ::open,
-                    onLongClick = { actionsFor = it },
+                    onLongClick = viewModel::toggleSelection,
+                    selectedIds = selection,
                 )
                 else -> FileList(
                     items = state.items,
@@ -205,13 +246,23 @@ fun BrowserScreen(
                     contentPadding = contentPadding,
                     onClick = ::open,
                     onMore = { actionsFor = it },
+                    onLongClick = viewModel::toggleSelection,
+                    selectedIds = selection,
+                )
+            }
+            operation?.let { progress ->
+                OperationProgressCard(
+                    progress = progress,
+                    onCancel = viewModel::cancelOperation,
+                    onDismiss = viewModel::dismissOperation,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = padding.calculateBottomPadding()),
                 )
             }
         }
     }
 
     actionsFor?.let { item ->
-        FileActionsSheet(item = item, onAction = { onAction(item, it) }, onDismiss = { actionsFor = null })
+        FileActionsSheet(item = item, canWrite = canWrite, onAction = { onAction(item, it) }, onDismiss = { actionsFor = null })
     }
     infoFor?.let { item ->
         FileInfoDialog(item = item, loadDetails = viewModel::loadDetails, onDismiss = { infoFor = null })
@@ -225,6 +276,56 @@ fun BrowserScreen(
                 ExternalActions.openWith(context, item, anyType = true)
             },
             onDismiss = { cannotOpen = null },
+        )
+    }
+
+    naming?.let { request ->
+        val existing = state.items.map { it.name }
+        when (request) {
+            NamingRequest.CreateFolder -> NameDialog(
+                title = "Nueva carpeta",
+                confirmLabel = "Crear",
+                initialName = "",
+                isDirectory = true,
+                existingNames = existing,
+                onConfirm = viewModel::createFolder,
+                onDismiss = { naming = null },
+            )
+            is NamingRequest.Rename -> NameDialog(
+                title = "Renombrar",
+                confirmLabel = "Renombrar",
+                initialName = request.item.name,
+                isDirectory = request.item.isDirectory,
+                existingNames = existing,
+                onConfirm = { viewModel.rename(request.item, it) },
+                onDismiss = { naming = null },
+            )
+        }
+    }
+    deleting?.let { items ->
+        DeleteConfirmDialog(
+            items = items,
+            onConfirm = {
+                deleting = null
+                if (!viewModel.delete(items)) scope.launch { snackbar.showSnackbar("Espera a que termine la operación en curso.") }
+            },
+            onDismiss = { deleting = null },
+        )
+    }
+    picking?.let { (kind, items) ->
+        val isMove = kind == OperationKind.MOVE
+        FolderPickerSheet(
+            title = (if (isMove) "Mover " else "Copiar ") + if (items.size == 1) "«${items.first().name}»" else "${items.size} elementos",
+            confirmLabel = if (isMove) "Mover" else "Copiar",
+            initialPath = remember(items) { viewModel.pickerStart() },
+            storages = writableStorages,
+            loadFolders = viewModel::foldersIn,
+            onPick = { target ->
+                picking = null
+                val started = if (isMove) viewModel.moveTo(items, target) else viewModel.copyTo(items, target)
+                if (!started) scope.launch { snackbar.showSnackbar("Espera a que termine la operación en curso.") }
+            },
+            onDismiss = { picking = null },
         )
     }
 

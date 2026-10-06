@@ -41,6 +41,8 @@ fun FileList(
     onClick: (FileItem) -> Unit,
     onMore: (FileItem) -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (FileItem) -> Unit = onMore,
+    selectedIds: Set<String> = emptySet(),
 ) {
     val scope = rememberCoroutineScope()
     Box(modifier.fillMaxSize()) {
@@ -53,7 +55,13 @@ fun FileList(
             modifier = Modifier.fillMaxSize(),
         ) {
             items(items, key = { it.documentId }, contentType = { it.isDirectory }) { item ->
-                FileRow(item, onClick = { onClick(item) }, onMore = { onMore(item) })
+                FileRow(
+                    item,
+                    selected = if (selectedIds.isEmpty()) null else item.documentId in selectedIds,
+                    onClick = { onClick(item) },
+                    onLongClick = { onLongClick(item) },
+                    onMore = { onMore(item) },
+                )
             }
         }
         FastScroller(
@@ -79,7 +87,7 @@ fun FileList(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FileRow(item: FileItem, onClick: () -> Unit, onMore: () -> Unit) {
+private fun FileRow(item: FileItem, selected: Boolean?, onClick: () -> Unit, onLongClick: () -> Unit, onMore: () -> Unit) {
     val context = LocalContext.current
     ListItem(
         headlineContent = { Text(item.name, maxLines = 1, overflow = TextOverflow.MiddleEllipsis) },
@@ -92,22 +100,30 @@ private fun FileRow(item: FileItem, onClick: () -> Unit, onMore: () -> Unit) {
             )
         },
         leadingContent = {
-            FileThumbnail(
-                item = item,
-                iconSize = 26.dp,
-                showVideoBadge = false,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .mediaSharedBounds(item.documentId, enabled = item.type.isVisualMedia),
-            )
-        },
-        trailingContent = {
-            IconButton(onClick = onMore) {
-                Icon(Icons.Filled.MoreVert, contentDescription = "Más opciones de ${item.name}")
+            Box {
+                FileThumbnail(
+                    item = item,
+                    iconSize = 26.dp,
+                    showVideoBadge = false,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .mediaSharedBounds(item.documentId, enabled = item.type.isVisualMedia),
+                )
+                if (selected != null) SelectionMark(selected, Modifier.align(Alignment.Center))
             }
         },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onMore),
+        // En modo selección se oculta el menú ⋮: las acciones están en la barra superior.
+        trailingContent = if (selected != null) null else {
+            {
+                IconButton(onClick = onMore) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "Más opciones de ${item.name}")
+                }
+            }
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = if (selected == true) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+        ),
+        modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
     )
 }

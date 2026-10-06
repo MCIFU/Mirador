@@ -11,6 +11,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DriveFileMove
+import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,12 +38,13 @@ import com.mcifu.usbx.domain.model.FileItem
 import com.mcifu.usbx.ui.common.Formatters
 import com.mcifu.usbx.ui.common.label
 
-enum class FileAction { OPEN, OPEN_WITH, MULTIVIEW, INFO, SHARE }
+enum class FileAction { OPEN, OPEN_WITH, MULTIVIEW, INFO, SHARE, RENAME, COPY, MOVE, DELETE }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileActionsSheet(
     item: FileItem,
+    canWrite: Boolean,
     onAction: (FileAction) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -78,6 +83,13 @@ fun FileActionsSheet(
             ActionRow(Icons.Outlined.Info, "Información") { onAction(FileAction.INFO) }
             if (!item.isDirectory) {
                 ActionRow(Icons.Outlined.Share, "Compartir") { onAction(FileAction.SHARE) }
+            }
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            ActionRow(Icons.Outlined.ContentCopy, "Copiar a…") { onAction(FileAction.COPY) }
+            if (canWrite) {
+                ActionRow(Icons.Outlined.DriveFileMove, "Mover a…") { onAction(FileAction.MOVE) }
+                ActionRow(Icons.Outlined.DriveFileRenameOutline, "Renombrar") { onAction(FileAction.RENAME) }
+                ActionRow(Icons.Outlined.Delete, "Eliminar") { onAction(FileAction.DELETE) }
             }
         }
     }
